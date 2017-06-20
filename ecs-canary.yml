@@ -1,5 +1,11 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Parameters:
+  RecordSetName:
+    Type: String
+    Description: A record to use to direct traffic to the load balancer
+  HostedZoneName:
+    Type: String
+    Description: Name of the hosted zone in Route53. This MUST end in a '.'
   KeyName:
     Type: AWS::EC2::KeyPair::KeyName
     Description: Name of an existing EC2 KeyPair to enable SSH access to the ECS instances.
@@ -138,10 +144,10 @@ Resources:
     DependsOn: ECSALB
     Type: AWS::Route53::RecordSetGroup
     Properties:
-      HostedZoneName: nickaws.net.    # Update with your DNS name. Replace all mention of nickaws.net.
+      HostedZoneName: !Ref HostedZoneName    # Update with your DNS name. Replace all mention of nickaws.net.
       Comment: Zone apex alias targeted to ECSALB LoadBalancer.
       RecordSets:
-      - Name: mysite.nickaws.net.
+      - Name: !Join ['.', [!Ref RecordSetName, !Ref HostedZoneName]]
         SetIdentifier: blue
         Weight: '100'
         Type: A
