@@ -1,11 +1,38 @@
 AWSTemplateFormatVersion: '2010-09-09'
+Description: "AWS CloudFormation ECS Green-Blue Sample Template. This template creates an ECS cluster, with a single instance. 
+             It registers an ALB, along with a task and service. It also creates a Route53 alias, which points to the ALB, using weighted DNS. 
+             The 'blue' ALB receives 100% of the traffic. In another template, we will register a new 'green' ALB in preparation 
+             for altering the DNS weights in order to send traffic to the new service."
+  # TODO: Alter ALB to be ALBblue. Also, adjust name to be ECS-blue-canary, and ECS-green-canary.  Blue must be created first.
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: "ECS cluster configuration. This will be new, dynamic cluster."
+        Parameters:
+          - InstanceType
+          - DesiredCapacity
+          - MaxSize 
+          - VpcId
+          - SubnetID
+          - KeyName
+      -
+        Label:
+          default: "Route53 DNS configuration"
+        Parameters:
+          - RecordSetName
+          - HostedZoneName
+    ParameterLabels:
+      VpcId:
+        default: "Which VPC should this ECS cluster be deployed to?"
 Parameters:
   RecordSetName:
     Type: String
-    Description: A record to use to direct traffic to the load balancer
+    Description: A record to use to direct traffic to the load balancer. For example "myservice".
   HostedZoneName:
     Type: String
-    Description: Name of the hosted zone in Route53. This MUST end in a '.'
+    Description: Name of the hosted zone in Route53. For example "example.com.". This MUST end in a '.'
   KeyName:
     Type: AWS::EC2::KeyPair::KeyName
     Description: Name of an existing EC2 KeyPair to enable SSH access to the ECS instances.
@@ -17,11 +44,11 @@ Parameters:
     Description: Select at least two subnets in your selected VPC.
   DesiredCapacity:
     Type: Number
-    Default: '1'
+    Default: '2'
     Description: Number of instances to launch in your ECS cluster.
   MaxSize:
     Type: Number
-    Default: '1'
+    Default: '4'
     Description: Maximum number of instances that can be launched in your ECS cluster.
   InstanceType:
     Description: EC2 instance type
@@ -36,27 +63,27 @@ Parameters:
 Mappings:
   AWSRegionToAMI:
     us-east-1:
-      AMIID: ami-0e297018
+      AMIID: ami-83af8395
     us-east-2:
-      AMIID: ami-43d0f626
+      AMIID: ami-9f9cbafa
     us-west-1:
-      AMIID: ami-fcd7f59c
+      AMIID: ami-c1c6eba1
     us-west-2:
-      AMIID: ami-596d6520
+      AMIID: ami-11120768
     eu-west-1:
-      AMIID: ami-5ae4f83c
-    ec-west-2:
-      AMIID: ami-ada6b1c9
+      amiid: ami-5f140c39
+    eu-west-2:
+      AMIID: ami-767e6812
     eu-central-1:
-      AMIID: ami-25a4004a
+      AMIID: ami-e656f189
     ap-northeast-1:
-      AMIID: ami-3a000e5d
+      AMIID: ami-fd10059a
     ap-southeast-1:
-      AMIID: ami-2428ab47
+      AMIID: ami-1926ab7a
     ap-southeast-2:
-      AMIID: ami-ac5849cf
+      AMIID: ami-6b6c7c08
     ca-central-1:
-      AMIID: ami-8cfb44e8
+      AMIID: ami-ead8678e
 Resources:
   ECSCluster:
     Type: AWS::ECS::Cluster
@@ -144,13 +171,13 @@ Resources:
     DependsOn: ECSALB
     Type: AWS::Route53::RecordSetGroup
     Properties:
-      HostedZoneName: !Ref HostedZoneName    # Update with your DNS name. Replace all mention of nickaws.net.
+      HostedZoneName: !Ref HostedZoneName    
       Comment: Zone apex alias targeted to ECSALB LoadBalancer.
       RecordSets:
       - Name: !Join ['.', [!Ref RecordSetName, !Ref HostedZoneName]]
         SetIdentifier: blue
         Weight: '100'
-        Type: A
+        Type: CNAME
         AliasTarget:
           HostedZoneId: !GetAtt ECSALB.CanonicalHostedZoneID
           DNSName: !GetAtt ECSALB.DNSName
@@ -206,7 +233,7 @@ Resources:
     Properties:
       VPCZoneIdentifier: !Ref 'SubnetID'
       LaunchConfigurationName: !Ref 'ContainerInstances'
-      MinSize: '1'
+      MinSize: '2'
       MaxSize: !Ref 'MaxSize'
       DesiredCapacity: !Ref 'DesiredCapacity'
     CreationPolicy:
@@ -342,11 +369,28 @@ Resources:
       Roles: [!Ref 'EC2Role']
 Outputs:
   ecsservice:
+    Description: Your ECS Service
     Value: !Ref 'service'
   ecscluster:
+    Description: Your ECS Cluster
     Value: !Ref 'ECSCluster'
+    Export:
+      Name: !Sub "${AWS::StackName}-ECSCluster"
   ECSALB:
     Description: Your ALB DNS URL
     Value: !Join ['', [!GetAtt [ECSALB, DNSName]]]
   taskdef:
+    Description: Your ECS Task definition
     Value: !Ref 'taskdefinition'
+  DNSName:
+    Description: Your Route53 DNS name, which points to your ALB with a weight of 100%
+    Value: !Join ['.', [!Ref RecordSetName, !Ref HostedZoneName]]
+  VpcId:
+    Description: The VPC the cluster is running in
+    Value: !Ref VpcId
+    Export:
+      Name: !Sub "${AWS::StackName}-VpcId"
+  EcsSecurityGroup:
+    Value: !Ref EcsSecurityGroup
+    Export:
+      Name: EcsSecurityGroup
