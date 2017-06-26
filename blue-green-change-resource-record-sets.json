@@ -1,0 +1,27 @@
+{
+  "Comment": "{ blue: 90, green: 10 }",
+  "Changes": [
+    {
+      "Action": "UPSERT",
+      "ResourceRecordSet": {
+        "Name": "nickaws.net.",
+        "Type": "CNAME",
+        "TTL": 60,
+        "Weight": 90,
+        "SetIdentifier": "blue",
+        "ResourceRecords": [{ "Value": "blue.domain.com" }]
+      }
+    },
+    {
+      "Action": "UPSERT",
+      "ResourceRecordSet": {
+        "Name": "nickaws.net.",
+        "Type": "CNAME",
+        "TTL": 60,
+        "Weight": 10
+        "SetIdentifier": "green",
+        "ResourceRecords": [{ "Value": "green.domain.com" }]
+      }
+    }
+  ]
+}'
