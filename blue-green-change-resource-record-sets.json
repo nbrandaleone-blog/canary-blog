@@ -5,7 +5,7 @@
       "Action": "UPSERT",
       "ResourceRecordSet": {
         "Name": "nickaws.net.",
-        "Type": "CNAME",
+        "Type": "A",
         "TTL": 60,
         "Weight": 90,
         "SetIdentifier": "blue",

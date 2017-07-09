@@ -1,0 +1,12 @@
+aws lambda create-function \
+--region us-east-1 \
+--function-name changeRoute53Weights \
+--zip-file fileb://changerrdeploy.zip \
+--role arn:aws:iam::991225764181:role/lambda_exec_role \
+--handler changerr.handler \
+--runtime python3.6 \
+--timeout 15 \
+--memory-size 128
+
+
+# --code S3Bucket=bucket-name,S3Key=zip-file-object-key

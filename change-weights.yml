@@ -1,0 +1,40 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  AWS CloudFormation ECS Green-Blue Sample Template. This template creates an ECS cluster, with a single instance.
+  It registers an ALB, along with a task and service. It also creates a Route53 alias, which points to the ALB, using weighted DNS.
+  The 'blue' ALB receives 100% of the traffic. In another template, we will register a new 'green' ALB in preparation
+  for altering the DNS weights in order to send traffic to the new service.
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: "Route53 DNS configuration"
+        Parameters:
+          - RecordSetName
+          - HostedZoneName
+Parameters:
+  RecordSetName:
+    Type: String
+    Description: A record to use to direct traffic to the load balancer. For example 'myservice'.
+  HostedZoneName:
+    Type: String
+    Description: Name of the hosted zone in Route53. For example 'example.com.'. This MUST end in a '.'
+
+Resources:
+# Blue-Green Route53 Record Sets with weights
+  myDNS:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneName: !Ref HostedZoneName
+      Comment: Zone apex alias targeted to ECSALB LoadBalancer.
+      RecordSets:
+      - Name: !Join ['.', [!Ref RecordSetName, !Ref HostedZoneName]]
+        SetIdentifier: blue
+        Weight: '50'
+        Type: CNAME
+Outputs:
+  DNSName:
+    Description: Your Route53 DNS name, which points to your ALB with a weight of 100%
+    Value: !Join ['.', [!Ref RecordSetName, !Ref HostedZoneName]]
