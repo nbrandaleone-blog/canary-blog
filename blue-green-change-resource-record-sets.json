@@ -18,7 +18,7 @@
         "Name": "nickaws.net.",
         "Type": "CNAME",
         "TTL": 60,
-        "Weight": 10
+        "Weight": 10,
         "SetIdentifier": "green",
         "ResourceRecords": [{ "Value": "green.domain.com" }]
       }
