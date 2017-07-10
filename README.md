@@ -1,6 +1,15 @@
-# Blue/Green deployments on ECS
+# Canary Blue/Green deployments on ECS
 
-This reference architecture is in reference to blog post on [blue green deployments on ECS](https://aws.amazon.com/blogs/compute/bluegreen-deployments-with-amazon-ecs/). It creates a continuous delivery by leveraging AWS CloudFormation templates. The templates creates resources using Amazon's Code* services to build and deploy containers onto an ECS cluster as long running services. It also includes a manual approval step facilitated by lambda function that discovers and swaps target group rules between 2 target groups, promoting the green version to production and demoting the blue version to staging. 
+This reference architecture is a companion to the blog post on 
+[canary blue green deployments on ECS](https://aws.amazon.com/blogs/compute/ecs.../). 
+In order to provide an automated and safe method of migrating traffic from a blue deployment
+to a green one, it leverages Route53 weights to adjust the traffic flow from one service to another.
+It associates a new service with a separate Application Load Balancer, leveraging ECS Event Streams 
+to trigger the deployment. Once triggered, Step Functions handle the transitioning of traffic 
+off of the blue ALB to the green one. If the Step Function detects a failure of the green service,
+it will automatically fail-back to the original configuration. The one concern users may have
+is that DNS propogation delay of approximately 60 seconds will be introduced between migration
+increments.
 
 ## Pre-Requisites
 This example uses [AWS Command Line Interface](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-welcome.html) to run Step-3 below.
@@ -13,6 +22,7 @@ aws --version
 
 Output from above must yield **AWS CLI version >= 1.11.37** 
 
+## From here down rewrite!
 ## Quick setup in three steps
 
 #### 1. Fork ECS Sample app
