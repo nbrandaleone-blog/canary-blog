@@ -1,0 +1,77 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  DesiredCount:
+    Type: Number
+    Default: 0
+
+  TargetGroup:
+    Type: String
+
+  Cluster:
+    Type: String
+
+Resources:
+  Repository:
+    Type: AWS::ECR::Repository
+    # DeletionPolicy: Retain
+    
+  ECSServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ecs.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceRole
+
+  Service:
+    Type: AWS::ECS::Service
+    DependsOn: 
+      - ECSServiceRole
+      - TaskDefinition
+    Properties:
+      Cluster: !Ref Cluster
+      Role: !Ref ECSServiceRole
+      DesiredCount: !Ref DesiredCount
+      TaskDefinition: !Ref TaskDefinition
+      LoadBalancers:
+        - ContainerName: simple-app
+          ContainerPort: 80
+          TargetGroupArn: !Ref TargetGroup
+
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub ${AWS::StackName}-simple-app
+      ContainerDefinitions:
+        - Name: simple-app
+          Image: amazon/amazon-ecs-sample
+          EntryPoint:
+            - /usr/sbin/apache2
+            - -D
+            - FOREGROUND
+          Essential: true
+          Memory: 128
+          MountPoints:
+            - SourceVolume: my-vol
+              ContainerPath: /var/www/my-vol
+          PortMappings:
+            - ContainerPort: 80
+              HostPort: 0
+        - Name: busybox
+          Image: busybox
+          EntryPoint:
+            - sh
+            - -c
+          Essential: false
+          Memory: 128
+          VolumesFrom:
+            - SourceContainer: simple-app
+          Command:
+            - /bin/sh -c "while true; do /bin/date > /var/www/my-vol/date; sleep 1; done"
+      Volumes:
+        - Name: my-vol

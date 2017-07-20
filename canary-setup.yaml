@@ -1,0 +1,89 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  A CloudFormation template to create an ECS canary blue-green deployment environment. 
+  This template creates an ECS cluster, with a task and service registered to a "blue" loadbalancer. It creates a second "green" loadbalancer.
+  <rewrite> 
+  It registers an ALB, along with a task and service. It also creates a Route53 alias, which points to the ALB, using weighted DNS. 
+  The 'blue' ALB receives 100% of the traffic. In another template, we will register a new 'green' ALB in preparation 
+  for altering the DNS weights in order to send traffic to the new service.
+  
+Parameters:
+  Route53DNS:
+    Type: String
+    Default: 'example.com'
+    Description: A DNS name which will be mapped to either a blue or green ECS service.
+
+  TemplateBucket:
+    Type: String
+    Description: >
+      S3 Bucket used for nested templates
+      
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: ECS canary blue green deployment, using DNS mechanism
+        Parameters:
+          - TemplateBucket
+          - Route53DNS
+    ParameterLabels:
+      TemplateBucket:
+        default: "An S3 bucket to hold your CloudFormation templates and lambda functions"
+      Route53DNS: 
+        default: "A DNS name for your ECS service?"
+
+Resources:
+  Cluster:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://s3.amazonaws.com/${TemplateBucket}/templates/ecs-cluster.yaml
+      Parameters:
+        SourceSecurityGroup: !GetAtt LoadBalancer.Outputs.SecurityGroup
+        Subnets: !GetAtt VPC.Outputs.Subnets
+        VpcId: !GetAtt VPC.Outputs.VpcId
+
+  LoadBalancer:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://s3.amazonaws.com/${TemplateBucket}/templates/load-balancer.yaml
+      Parameters:
+        Subnets: !GetAtt VPC.Outputs.Subnets
+        VpcId: !GetAtt VPC.Outputs.VpcId
+
+  VPC:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://s3.amazonaws.com/${TemplateBucket}/templates/vpc.yaml
+      Parameters:
+        Name: !Ref AWS::StackName
+        VpcCIDR: 192.168.0.0/16
+        Subnet1CIDR: 192.168.10.0/24
+        Subnet2CIDR: 192.168.20.0/24
+
+  Service:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://s3.amazonaws.com/${TemplateBucket}/templates/service.yaml
+      Parameters:
+        Tag: blue
+        DesiredCount: 1
+        Cluster: !GetAtt Cluster.Outputs.ClusterName
+        TargetGroup: !GetAtt LoadBalancer.Outputs.TargetGroup
+
+  Route53:
+    Type: AWS::Route53::HostedZone
+    DependsOn: LoadBalancer
+    Properties: 
+      HostedZoneConfig:
+        Comment: 'My hosted zone for canary testing'
+      HostedZoneTags:
+        - 
+          Key: purpose
+          Value: blue-greeen-canary
+      Name: !Ref Route53DNS
+      # VPCs: For private hosted zones
+      
+Outputs:
+  ServiceUrl:
+    Description: The sample service that is being continuously deployed.
+    Value: !GetAtt LoadBalancer.Outputs.ServiceUrl

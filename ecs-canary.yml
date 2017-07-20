@@ -26,6 +26,7 @@ Metadata:
     ParameterLabels:
       VpcId:
         default: "Which VPC should this ECS cluster be deployed to?"
+        
 Parameters:
   RecordSetName:
     Type: String

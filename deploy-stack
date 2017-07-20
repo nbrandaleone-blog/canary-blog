@@ -1,0 +1,4 @@
+aws cloudformation deploy --stack-name test-ecs --template-file canary-setup.yaml -
+-capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubUser=user TemplateBucket=nbrand-code
+
+aws cloudformation delete-stack --stack-name test-ecs

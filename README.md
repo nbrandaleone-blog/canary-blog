@@ -22,6 +22,76 @@ aws --version
 
 Output from above must yield **AWS CLI version >= 1.11.37** 
 
+## Getting Started
+
+To get started, clone this repository locally:
+
+```
+$ git clone https://github.com/awslabs/aws-vpc-flow-log-appender
+```
+
+The repository contains [CloudFormation](https://aws.amazon.com/cloudformation/) templates and source code to deploy and run the sample application.
+
+### Prerequisites
+
+To run the vpc-flow-log-appender sample, you will need to:
+
+1. Select an AWS Region into which you will deploy services. Be sure that all required services (AWS Lambda, Amazon Elastisearch Service, AWS CloudWatch, and AWS Kinesis Firehose) are available in the Region you select.
+2. Confirm your [installation of the latest AWS CLI](http://docs.aws.amazon.com/cli/latest/userguide/installing.html) (at least version 1.11.21).
+3. Confirm the [AWS CLI is properly configured](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-quick-configuration) with credentials that have administrator access to your AWS account.
+4. [Install Node.js and NPM](https://docs.npmjs.com/getting-started/installing-node).
+## Preparing to Deploy Lambda
+
+Before deploying the sample, install several dependencies using NPM:
+
+```
+$ cd vpc-flow-log-appender/decorator
+$ npm install
+$ cd ../ingestor
+$ npm install
+$ cd ..
+```
+
+## Deploy Lambda Functions
+
+The deployment of our AWS resources is managed by a CloudFormation template using AWS Serverless Application Model.
+
+1. Create a new S3 bucket from which to deploy our source code (ensure that the bucket is created in the same AWS Region as your network and services will be deployed):
+
+    ```
+    $ aws s3 mb s3://<MY_BUCKET_NAME>
+    ```
+
+2. Using the Serverless Application Model, package your source code and serverless stack:
+
+    ```
+    $ aws cloudformation package --template-file app-sam.yaml --s3-bucket <MY_BUCKET_NAME> --output-template-file app-sam-output.yaml
+    ```
+
+3. Once packaging is complete, deploy the stack:
+
+    ```
+    $ aws cloudformation deploy --template-file app-sam-output.yaml --stack-name vpc-flow-log-appender-dev --capabilities CAPABILITY_IAM
+    ```
+
+ 4. Once we have deployed our Lambda functions, we need to return to CloudWatch and configure VPC Flow Logs to stream the data to the Lambda function. (TODO: add more detail)
+
+## Testing
+
+In addition to running aws-vpc-flow-log-appender using live VPC Flow Log data from your own environment, we can also leverage the [Kinesis Data Generator](https://awslabs.github.io/amazon-kinesis-data-generator/web/producer.html) to send mock flow log data to our Kinesis Firehose instance.
+
+A few notes on the above test procedure:
+
+* While our example utilizes the ENI ID of an EC2 instance, you may use any ENI available in the AWS Region in which you deployed the sample code.
+* Feel free to tweak the mock data template if needed, this is only intended to be an example.
+* Do not modify values in double curly braces, these are part of the KDG template and will automatically be filled.
+
+## Cleaning Up
+
+To clean-up the Lambda functions when you are finished with this sample:
+
+```
+$ aws cloudformation delete-stack --stack-name vpc-flow-log-appender-dev
 ## From here down rewrite!
 ## Quick setup in three steps
 
@@ -126,3 +196,35 @@ Here are the inputs required to launch CloudFormation templates:
 
                                                                             ## Cleanup
                                                                             First delete ecs-cluster CloudFormation stack, this will delete both ECS services (BlueService and GreenService) and LoadBalancer stacks. Next delete the parent stack. This should delete all the resources that were created for this exercise 
+## CloudFormation template resources
+
+The following sections explains all of the resources created by the CloudFormation template provided with this example.
+
+#### [DeploymentPipeline](templates/deployment-pipeline.yaml)
+
+  Resources that compose the deployment pipeline include the CodeBuild project, the CodePipeline pipeline, an S3 bucket for deployment artifacts, and all necessary IAM roles used by those services.
+
+#### [Service](templates/service.yaml)
+
+  An ECS task definition, service, IAM role, and ECR repository for the sample application. This template is used by the CodePipeline pipeline to deploy the sample service continuously.
+
+#### [Cluster](templates/ecs-cluster.yaml)
+
+  An ECS cluster backed by an Auto Scaling group of EC2 instances running the Amazon ECS-optimized AMI.
+
+#### [Load Balancer](templates/load-balancer.yaml)
+
+  An Application Load Balancer to be used for traffic to the sample application.
+
+#### [VPC](templates/vpc.yaml)
+
+  A VPC with two public subnets on two separate Availability Zones, an internet gateway, and a route table with a default route to the public internet.
+
+## License
+
+This reference architecture sample is [licensed][license] under Apache 2.0.
+
+
+[continuous-deployment]: https://aws.amazon.com/devops/continuous-delivery/
+[architecture]: images/architecture.pdf
+[license]: LICENSE
