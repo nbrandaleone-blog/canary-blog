@@ -7,8 +7,9 @@ to a green one, it leverages Route53 weights to adjust the traffic flow from one
 It associates a new service with a separate Application Load Balancer, leveraging ECS Event Streams 
 to trigger the deployment. Once triggered, Step Functions handle the transitioning of traffic 
 off of the blue ALB to the green one. If the Step Function detects a failure of the green service,
-it will automatically fail-back to the original configuration. The one concern users may have
-is that DNS propogation delay of approximately 60 seconds will be introduced between migration
+it will automatically fail-back to the original configuration. This solution does not destroy the original service, 
+so it does offer a safe and reliable method of transitioning traffic, including natural "connection-draining".
+The one concern users may have is that DNS propogation delay of approximately 60 seconds will be introduced between migration
 increments.
 
 ## Pre-Requisites
@@ -21,6 +22,12 @@ aws --version
 ```
 
 Output from above must yield **AWS CLI version >= 1.11.37** 
+
+The CloudFormation set-up script will create a DynamoDB table to maintain state. 
+This is necessary since we use [Event Streams](http://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs_cwet_handling.html) to trigger
+the Route53 weights from the blue to the green service.  However, Amazon ECS sends events on an "at least once" basis. This means you may receive more 
+than a single copy of a given event. Additionally, events may not be delivered to your event listeners in the order in which the events occurred.
+We will use a small table to keep track of state, so we do not trigger the process more than once.
 
 ## Getting Started
 

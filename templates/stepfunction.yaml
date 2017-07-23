@@ -1,0 +1,82 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: An example template for a Step Functions state machine.
+Resources:
+  MyStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      DefinitionString: |-
+        {
+          "Comment": "Altering Route53 weights for canary blue-green deployment",
+          "StartAt": "FirstState",
+          "States": {
+            "FirstState": {
+              "Type": "Wait",
+              "Seconds": 10,
+              "Next": "send_10"
+            },
+            "send_10": {
+              "Type": "Pass",
+              "Result": { "weight": 10 },
+              "Next": "change_10_percent"
+              },
+            "change_10_percent": {
+              "Type": "Task",
+              "Resource": "arn:aws:lambda:us-east-1:991225764181:function:changeRoute53Weights",
+              "Next": "wait_60_seconds"
+            },
+            "wait_60_seconds": {
+              "Type": "Wait",
+              "Seconds": 60,
+              "Next": "test_service"
+            },
+            "test_service": {
+              "Type": "Task",
+              "Resource": "arn:aws:lambda:us-east-1:991225764181:function:testWebSite",
+              "Next": "ChoiceState"
+            },
+            "ChoiceState": {
+              "Type" : "Choice",
+              "Comment":"Check to see if new service is responding with HTTP response code: 200",
+              "Choices": [
+                {
+                  "Variable": "$.status",
+                  "BooleanEquals": true,
+                  "Next": "send_50"
+                },
+                {
+                  "Variable": "$.status",
+                  "BooleanEquals": false,
+                  "Next": "send_0_percent"
+                }
+              ],
+              "Default": "FinalState"
+            },
+            "send_50": {
+              "Type": "Pass",
+              "Result": { "weight": 50 },
+              "Next": "change_50_percent"
+              },
+            "change_50_percent": {
+              "Type": "Task",
+              "Resource": "arn:aws:lambda:us-east-1:991225764181:function:changeRoute53Weights",
+              "Next": "FinalState"
+              },
+              "rollback": {
+                "Type": "Task",
+                "Resource": "arn:aws:lambda:us-east-1:991225764181:function:changeRoute53Weights",
+                "Next": "FinalState"
+                },
+                "send_0_percent": {
+                  "Type": "Pass",
+                  "Result": { "weight": 0 },
+                  "Next": "rollback"
+                  },
+            "FinalState": {
+              "Type": "Wait",
+              "Seconds": 1,
+              "End": true
+            }
+          }
+        }
+      - {lambdaArn: !GetAtt [ MyLambdaFunction, Arn ]}
+      RoleArn: arn:aws:iam::111122223333:role/service-role/StatesExecutionRole-us-east-1

@@ -1,0 +1,19 @@
+﻿AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: Handles ECS Events even if there are duplicates or timing issues
+Resources:
+  handleECSEvents:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: index.lambda_handler
+      Runtime: python2.7
+      CodeUri: .
+      Description: Handles ECS Events even if there are duplicates or timing issues
+      MemorySize: 128
+      Timeout: 3
+      Role: 'arn:aws:iam::991225764181:role/lambda_exec_role'
+      Events:
+        Schedule1:
+          Type: Schedule
+          Properties:
+            Schedule: rate(1 minute)

@@ -1,0 +1,47 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Create Route53 Hosted Zones for demonstration of canary blue-green deployment
+  
+Parameters:
+  ZoneName:
+    Type: String
+  RecordName:
+    Type: String
+  DNSName:
+    Type: String
+  CanonicalZone:
+    Type: String
+
+Resources:
+  Route53:
+    Type: AWS::Route53::HostedZone
+    Properties: 
+      HostedZoneConfig:
+        Comment: 'My hosted zone for canary testing'
+      HostedZoneTags:
+        - 
+          Key: purpose
+          Value: blue-greeen-canary
+      Name: !Ref ZoneName
+      # VPCs: For private hosted zones
+      
+  DNSRecord:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneName: !Ref ZoneName
+      Comment: Alias targeted to ECS ALB LoadBalancer
+      RecordSets:
+      - Name: !Join ['.', [!Ref RecordName, !Ref ZoneName]]
+        SetIdentifier: blue
+        Weight: 100
+        Type: A
+        AliasTarget:
+          HostedZoneId: !Ref CanonicalZone
+          DNSName: !Ref DNSName
+          EvaluateTargetHealth: False
+        
+#Outputs:
+#  Subnets:
+#    Value: !Join [ ",", [ !Ref Subnet1, !Ref Subnet2 ] ]
+#  VpcId:
+#    Value: !Ref VPC

@@ -1,0 +1,66 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  This series of templates creates the lambda functions, Step Functions, dynamoDB table and Events Streams required to trigger and execute
+  the switch from one service to another. It assumes that the ECS cluster, services, load-balancers, tasks, etc... have been created
+  and are working. That infrastucture is created by the first set of "canary-setup" CloudFormation templates. 
+  
+Parameters:
+  TemplateBucket:
+    Type: String
+
+Resources:
+  
+  # Since Serverless Transforms cannot exist in sub-stacks, we put all functions and tables here in the parent stack
+  ecstaskstate: # Used to capture ECS Task State
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      PrimaryKey:
+        Name: taskArn
+        Type: String
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+
+  ecsctrinstancestate: # Captures ECS Container Instance state
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      PrimaryKey:
+        Name: containerInstanceArn
+        Type: String
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+
+  handleECSEvents:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: index.lambda_handler
+      Runtime: python2.7
+      CodeUri: # CodeUri: 's3://my-code-bucket/my-function.zip'
+        Bucket: !Ref TemplateBucket
+        Key: 'lambdafunctions/handleECSEvents.zip'
+      Description: Handles ECS Events even if there are duplicates or timing issues
+      Environment:
+        Variables:
+          TABLE_NAME: 'test_env_variable' # !Ref Table
+      MemorySize: 128
+      Timeout: 3
+      Policies:
+        - "AWSLambdaFullAccess"
+      Events:
+        ECSStream:
+          Description: "Sending ECS events to a Lambda function for processing"
+          Type: CloudWatchEvent
+          Properties:
+            Pattern:
+              source:
+                - 'aws.ecs'
+#              detail:
+#                state:
+#                  - running
+
+Outputs:
+  DynamoDBTableName:
+    Description: The DynamoDB table name for dynamoDB table ecstaskstate
+    Value: !Ref ecstaskstate

@@ -1,0 +1,30 @@
+﻿AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: Handles ECS Events even if there are duplicates or timing issues
+
+Parameters:
+  code:
+    Type: String
+    Description: The location of the zipped code package
+    
+Resources:
+  handleECSEvents:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: index.lambda_handler
+      Runtime: python2.7
+      CodeUri: !Ref code
+      Description: Handles ECS Events even if there are duplicates or timing issues
+      Environment:
+        Variables:
+          TABLE_NAME: 'test_env_variable' # !Ref Table
+      MemorySize: 128
+      Timeout: 3
+      Policies:
+        - "AWSLambdaFullAccess"
+#      Role: 'arn:aws:iam::991225764181:role/lambda_exec_role'
+#      Events:
+#        Schedule1:
+#          Type: Schedule
+#          Properties:
+#            Schedule: rate(1 minute)
