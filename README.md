@@ -12,6 +12,8 @@ so it does offer a safe and reliable method of transitioning traffic, including 
 The one concern users may have is that DNS propogation delay of approximately 60 seconds will be introduced between migration
 increments.
 
+![Diagram 1](images/canary-blue-green.png)
+
 ## Pre-Requisites
 This example uses [AWS Command Line Interface](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-welcome.html) to run Step-3 below.
 
