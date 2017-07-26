@@ -2,7 +2,7 @@ AWSTemplateFormatVersion: '2010-09-09'
 Parameters:
   DesiredCount:
     Type: Number
-    Default: 0
+    Default: 1
 
   TargetGroup:
     Type: String
@@ -39,23 +39,24 @@ Resources:
       DesiredCount: !Ref DesiredCount
       TaskDefinition: !Ref TaskDefinition
       LoadBalancers:
-        - ContainerName: simple-app
+        - ContainerName: blue-app
           ContainerPort: 80
           TargetGroupArn: !Ref TargetGroup
 
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
-      Family: !Sub ${AWS::StackName}-simple-app
+      Family: !Sub ${AWS::StackName}-canary-app
       ContainerDefinitions:
-        - Name: simple-app
+        - Name: blue-app
+          Cpu: 100
+          Memory: 128
+          Essential: true
           Image: amazon/amazon-ecs-sample
           EntryPoint:
             - /usr/sbin/apache2
             - -D
             - FOREGROUND
-          Essential: true
-          Memory: 128
           MountPoints:
             - SourceVolume: my-vol
               ContainerPath: /var/www/my-vol
@@ -68,10 +69,11 @@ Resources:
             - sh
             - -c
           Essential: false
+          Cpu: 100
           Memory: 128
           VolumesFrom:
-            - SourceContainer: simple-app
+            - SourceContainer: blue-app
           Command:
-            - /bin/sh -c "while true; do /bin/date > /var/www/my-vol/date; sleep 1; done"
+            - /bin/sh -c "echo BLUE-SERVICE > /var/www/my-vol/date"
       Volumes:
         - Name: my-vol

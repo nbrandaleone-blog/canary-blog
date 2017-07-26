@@ -20,8 +20,7 @@ Parameters:
     Description: Name of the hosted zone in Route53. For example 'example.com.'. This MUST end in a '.'
   TemplateBucket:
     Type: String
-    Description: >
-      S3 Bucket used for nested templates
+    Description: S3 Bucket used for nested templates
       
 Metadata:
   AWS::CloudFormation::Interface:
@@ -46,7 +45,8 @@ Resources:
     Properties:
       TemplateURL: !Sub https://s3.amazonaws.com/${TemplateBucket}/templates/ecs-cluster.yaml
       Parameters:
-        SourceSecurityGroup: !GetAtt LoadBalancer.Outputs.SecurityGroup
+        SourceSecurityGroup1: !GetAtt LoadBalancer.Outputs.SecurityGroup
+        SourceSecurityGroup2: !GetAtt NewLB.Outputs.SecurityGroup
         Subnets: !GetAtt VPC.Outputs.Subnets
         VpcId: !GetAtt VPC.Outputs.VpcId
 
@@ -58,6 +58,14 @@ Resources:
         Subnets: !GetAtt VPC.Outputs.Subnets
         VpcId: !GetAtt VPC.Outputs.VpcId
 
+  NewLB:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://s3.amazonaws.com/${TemplateBucket}/templates/load-balancer.yaml
+      Parameters:
+        Subnets: !GetAtt VPC.Outputs.Subnets
+        VpcId: !GetAtt VPC.Outputs.VpcId
+        
   VPC:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -71,24 +79,31 @@ Resources:
   Service:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://s3.amazonaws.com/${TemplateBucket}/templates/service.yaml
+      TemplateURL: !Sub https://s3.amazonaws.com/${TemplateBucket}/templates/blueService.yaml
       Parameters:
-        DesiredCount: 1
         Cluster: !GetAtt Cluster.Outputs.ClusterName
         TargetGroup: !GetAtt LoadBalancer.Outputs.TargetGroup
 
   Route53:
     Type: AWS::CloudFormation::Stack
     DependsOn: LoadBalancer
+    DependsOn: NewLB
     Properties:
       TemplateURL: !Sub https://s3.amazonaws.com/${TemplateBucket}/templates/route53.yaml
       Parameters:
         ZoneName: !Ref HostedZoneName
         RecordName: !Ref RecordSetName
-        DNSName: !GetAtt LoadBalancer.Outputs.DNSName
+        BlueName: !GetAtt LoadBalancer.Outputs.DNSName
+        GreenName: !GetAtt NewLB.Outputs.DNSName
         CanonicalZone: !GetAtt LoadBalancer.Outputs.CanonicalZone
     
 Outputs:
-  ServiceUrl:
-    Description: The sample service that is being continuously deployed.
+  DNS:
+    Description: The DNS name of the Route53 domain handling the blue-green service
+    Value: !GetAtt Route53.Outputs.DNS
+  BlueLoadBalancerUrl:
+    Description: The URL of the LB handling the blue service
     Value: !GetAtt LoadBalancer.Outputs.ServiceUrl
+  GreenLoadBalancerUrl:
+    Description: The URL of the LB handling the green service
+    Value: !GetAtt NewLB.Outputs.ServiceUrl

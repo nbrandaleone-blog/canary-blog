@@ -2,7 +2,7 @@ AWSTemplateFormatVersion: '2010-09-09'
 Parameters:
   InstanceType:
     Type: String
-    Default: t2.large
+    Default: t2.small
 
   ClusterSize:
     Type: Number
@@ -11,9 +11,12 @@ Parameters:
   Subnets:
     Type: List<AWS::EC2::Subnet::Id>
 
-  SourceSecurityGroup:
+  SourceSecurityGroup1:
     Type: AWS::EC2::SecurityGroup::Id
 
+  SourceSecurityGroup2:
+    Type: AWS::EC2::SecurityGroup::Id
+    
   VpcId:
     Type: AWS::EC2::VPC::Id
 
@@ -72,7 +75,9 @@ Resources:
     Properties:
       GroupDescription: !Sub ${AWS::StackName}-hosts
       SecurityGroupIngress:
-        - SourceSecurityGroupId: !Ref SourceSecurityGroup
+        - SourceSecurityGroupId: !Ref SourceSecurityGroup1
+          IpProtocol: -1
+        - SourceSecurityGroupId: !Ref SourceSecurityGroup2
           IpProtocol: -1
       VpcId: !Ref VpcId
 

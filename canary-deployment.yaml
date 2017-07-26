@@ -60,6 +60,14 @@ Resources:
 #                state:
 #                  - running
 
+  Service:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://s3.amazonaws.com/${TemplateBucket}/templates/greenService.yaml
+      Parameters:
+        Cluster: !GetAtt Cluster.Outputs.ClusterName
+        TargetGroup: !GetAtt LoadBalancer.Outputs.TargetGroup
+        
 Outputs:
   DynamoDBTableName:
     Description: The DynamoDB table name for dynamoDB table ecstaskstate

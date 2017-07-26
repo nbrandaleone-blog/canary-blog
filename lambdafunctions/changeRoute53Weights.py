@@ -1,27 +1,36 @@
 from __future__ import print_function
+
 import boto3
+import json
+import os
 
 client = boto3.client('route53')
 
-#blue_weight = 60
-#green_weight = 100 - blue_weight
+HostedZoneID = os.environ['HostedZoneID']
+LBZoneID = os.environ['LBZoneID']
+ServiceName = os.environ['Service']
+fromDNS = os.environ['BlueLoadBalancer']
+toDNS = os.environ['GreenLoadBalancer']
 
 def change_weights(blue_weight, green_weight): 
+    global HostedZoneID, LBZoneID, ServiceName, fromDNS, toDNS
+    
     response = client.change_resource_record_sets(
-            HostedZoneId='ZTXBD7RUFCM9H',
+  
+            HostedZoneId = HostedZoneID,
             ChangeBatch={
                 'Comment': 'alter Route53 records sets for canary blue-green deployment',
                 'Changes': [
                     {
                         'Action': 'UPSERT',
                         'ResourceRecordSet': {
-                            'Name': 'myservice.nickaws.net.',
+                            'Name': ServiceName,
                             'Type': 'A',
                             'SetIdentifier': 'blue',
                             'Weight': blue_weight,
                             'AliasTarget': {
-                                'HostedZoneId': 'Z35SXDOTRQ7X7K',
-                                'DNSName': 'ecsalb-802606693.us-east-1.elb.amazonaws.com.',
+                                'HostedZoneId': LBZoneID,
+                                'DNSName': fromDNS,
                                 'EvaluateTargetHealth': False
                                 }
                             }
@@ -29,13 +38,13 @@ def change_weights(blue_weight, green_weight):
                     {
                         'Action': 'UPSERT',
                         'ResourceRecordSet': {
-                            'Name': 'myservice.nickaws.net.',
+                            'Name': ServiceName,
                             'Type': 'A',
                             'SetIdentifier': 'green',
                             'Weight': green_weight,
                             'AliasTarget': {
-                                'HostedZoneId': 'Z35SXDOTRQ7X7K',
-                                'DNSName': 'ecsalbgreen-66710691.us-east-1.elb.amazonaws.com.',
+                                'HostedZoneId': LBZoneID, 
+                                'DNSName': toDNS,
                                 'EvaluateTargetHealth': False
                                 }
                             }
@@ -45,7 +54,7 @@ def change_weights(blue_weight, green_weight):
             )
     return response
 
-def handler(event, context):
+def lambda_handler(event, context):
     print(event)
     resp = change_weights(event['weight'], 100-event['weight'])
     #resp = change_weights(50,50)
