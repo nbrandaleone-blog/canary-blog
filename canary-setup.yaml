@@ -2,14 +2,12 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
   A CloudFormation template to create an ECS canary blue-green deployment environment. 
-  This template creates an ECS cluster, with a task and service registered to a "blue" loadbalancer. It creates a second "green" loadbalancer.
-  It also registers a Route53 domain name for a service.  This service will point at the blue loadbalancer to start.
-  Eventually, when a new service is created...
-  <rewrite> This template illustrates how to use AWS CodeBuild and AWS CodePipeline to achieve continuous deployment of source code 
-  from a GitHub repository via a Docker container to an Amazon EC2 Container Service cluster. 
-  It registers an ALB, along with a task and service. It also creates a Route53 alias, which points to the ALB, using weighted DNS. 
-  The 'blue' ALB receives 100% of the traffic. In another template, we will register a new 'green' ALB in preparation 
-  for altering the DNS weights in order to send traffic to the new service.
+  This template creates a VPC, an ECS cluster, with a task and service registered to a 'blue' loadbalancer.
+  It also registers a Route53 domain name for a service.  This domain will point at the blue loadbalancer to start.
+  In another template, we will register a new 'green' ECS service with another ALB.  Once the service is running, we shall
+  use Route53 to slowly transition traffic from the blue to the green service using weighted Round Robin.  If we detect an error in the new service,
+  we will roll back. The inital transition is done slowly (i.e. a canary service) to give us a chance to catch errors. 
+  Then the traffic is quickly moved over as we gain confidence in the service.
   
 Parameters:
   RecordSetName:
@@ -107,3 +105,13 @@ Outputs:
   GreenLoadBalancerUrl:
     Description: The URL of the LB handling the green service
     Value: !GetAtt NewLB.Outputs.ServiceUrl
+  ClusterName:
+    Description: The ECS cluster name
+    Value: !Ref Cluster
+    Export: 
+      Name: !Sub "${AWS::StackName}-Cluster"
+  TargetGroup:
+    Description: The Load Balancer's Target Group. This allows the new ECS service to register with the proper LB
+    Value: !GetAtt NewLB.Outputs.TargetGroup
+    Export: 
+      Name: !Sub "${AWS::StackName}-TG"
