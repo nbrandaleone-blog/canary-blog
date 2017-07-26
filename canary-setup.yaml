@@ -115,3 +115,8 @@ Outputs:
     Value: !GetAtt NewLB.Outputs.TargetGroup
     Export: 
       Name: !Sub "${AWS::StackName}-TG"
+  BucketName:
+    Description: The S3 bucket where all the templates and scripts are being stored
+    Value: !Ref TemplateBucket
+    Export:
+      Name: !Sub "${AWS::StackName}-Bucket"

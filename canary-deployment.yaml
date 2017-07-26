@@ -3,11 +3,16 @@ Transform: AWS::Serverless-2016-10-31
 Description: >
   This series of templates creates the lambda functions, Step Functions, dynamoDB table and Events Streams required to trigger and execute
   the switch from one service to another. It assumes that the ECS cluster, services, load-balancers, tasks, etc... have been created
-  and are working. That infrastucture is created by the first set of "canary-setup" CloudFormation templates. 
+  and are working. That infrastucture is created by the "canary-setup" CloudFormation template. 
   
 Parameters:
+  #SetupStackName:
+   # Type: String
+    #Default: "canary"
   TemplateBucket:
     Type: String
+    Default: Fn::ImportValue 
+          !Sub "${SetupStackName}-Bucket"
 
 Resources:
   
@@ -65,8 +70,10 @@ Resources:
     Properties:
       TemplateURL: !Sub https://s3.amazonaws.com/${TemplateBucket}/templates/greenService.yaml
       Parameters:
-        Cluster: !GetAtt Cluster.Outputs.ClusterName
-        TargetGroup: !GetAtt LoadBalancer.Outputs.TargetGroup
+        Cluster: Fn::ImportValue 
+          !Sub "${SetupStackName}-Cluster" #!GetAtt Cluster.Outputs.ClusterName
+        TargetGroup: Fn::ImportValue
+          !Sub "${SetupStackName}-TG" #!GetAtt LoadBalancer.Outputs.TargetGroup
         
 Outputs:
   DynamoDBTableName:
