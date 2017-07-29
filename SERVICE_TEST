@@ -1,5 +1,0 @@
-aws cloudformation deploy --stack-name service-test \
---template-file templates/greenService.yaml --capabilities \
-CAPABILITY_NAMED_IAM --parameter-overrides \
-Cluster=canary-test-Cluster-1M4LAR0E3RGV6 \
-TargetGroup=arn:aws:elasticloadbalancing:us-east-1:991225764181:targetgroup/canar-Targe-1IQH6M0FXBG8D/32fc7518861b8e6d

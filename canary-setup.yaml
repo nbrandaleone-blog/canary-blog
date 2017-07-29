@@ -95,6 +95,11 @@ Resources:
         GreenName: !GetAtt NewLB.Outputs.DNSName
         CanonicalZone: !GetAtt LoadBalancer.Outputs.CanonicalZone
     
+  myDynamoDBTable:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://s3.amazonaws.com/${TemplateBucket}/templates/dynamo.yaml
+        
 Outputs:
   DNS:
     Description: The DNS name of the Route53 domain handling the blue-green service
@@ -107,7 +112,7 @@ Outputs:
     Value: !GetAtt NewLB.Outputs.ServiceUrl
   ClusterName:
     Description: The ECS cluster name
-    Value: !Ref Cluster
+    Value: !GetAtt Cluster.Outputs.ClusterName
     Export: 
       Name: !Sub "${AWS::StackName}-Cluster"
   TargetGroup:
@@ -120,3 +125,8 @@ Outputs:
     Value: !Ref TemplateBucket
     Export:
       Name: !Sub "${AWS::StackName}-Bucket"
+  TableName:
+    Description: Table name of the newly created DynamoDB table
+    Value: !Ref 'myDynamoDBTable'
+    Export:
+      Name: !Sub "${AWS::StackName}-Table"

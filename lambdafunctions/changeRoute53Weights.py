@@ -3,18 +3,19 @@ from __future__ import print_function
 import boto3
 import json
 import os
+from boto3.dynamodb.conditions import Key, Attr
+from botocore.exceptions import ClientError
+
+# test event. {
+#  "weight": 80,
+#  "target": "green-app"
+#   }
+
 
 client = boto3.client('route53')
+dynamodb = boto3.resource('dynamodb', region_name='us-east-1') # dynamodb.us-east-1.amazonaws.com
 
-HostedZoneID = os.environ['HostedZoneID']
-LBZoneID = os.environ['LBZoneID']
-ServiceName = os.environ['Service']
-fromDNS = os.environ['BlueLoadBalancer']
-toDNS = os.environ['GreenLoadBalancer']
-
-def change_weights(blue_weight, green_weight): 
-    global HostedZoneID, LBZoneID, ServiceName, fromDNS, toDNS
-    
+def change_weights(blue_weight, green_weight, HostedZoneID, LBZoneID, ServiceName, fromDNS, toDNS): 
     response = client.change_resource_record_sets(
   
             HostedZoneId = HostedZoneID,
@@ -55,14 +56,32 @@ def change_weights(blue_weight, green_weight):
     return response
 
 def lambda_handler(event, context):
-    print(event)
-    resp = change_weights(event['weight'], 100-event['weight'])
-    #resp = change_weights(50,50)
+    # For debugging so you can see raw event format.
+    print('Here is the event:')
+    print(json.dumps(event))
+    
+    table = dynamodb.Table('CanaryTable')
+    target = event['target']
+    
+    try:
+        response = table.get_item(
+            Key={ 'NewContainerName': target }
+        )
+    except ClientError as e:
+        print(e.response['Error']['Message'])
+    else:
+        item = response['Item']
+        print("GetItem succeeded:")
+        print(json.dumps(item, indent=4))
+        
+    blue_weight = event['weight']
+    green_weight = 100-event['weight']
+    HostedZoneID = item['HostedZoneID']
+    LBZoneID = item['LBZoneID']
+    ServiceName = item['RecordName']
+    fromDNS = item['OldLB']
+    toDNS = item['NewLB']
+    
+    resp = change_weights(blue_weight, green_weight, HostedZoneID, LBZoneID, ServiceName, fromDNS, toDNS)
     print(resp)
-    return {"message": "Success"}
-
-#response = client.get_hosted_zone(
-#        Id='ZTXBD7RUFCM9H'
-#        )
-#
-#print (response['HostedZone']['Name'])
+    return target

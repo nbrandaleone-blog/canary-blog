@@ -1,0 +1,24 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: This DynamoDB table handles "state" for canary deployments
+  
+Resources: 
+  myDynamoDBTable: 
+    Type: "AWS::DynamoDB::Table"
+    Properties: 
+      AttributeDefinitions: 
+        - 
+          AttributeName: "NewContainerName"
+          AttributeType: "S"
+      KeySchema: 
+        - 
+          AttributeName: "NewContainerName"
+          KeyType: "HASH"
+      ProvisionedThroughput: 
+        ReadCapacityUnits: "1"
+        WriteCapacityUnits: "1"
+      TableName: "canaryTable"
+      
+Outputs:
+  TableName:
+    Value: !Ref 'myDynamoDBTable'
+    Description: Table name of the newly created DynamoDB table

@@ -1,0 +1,3 @@
+aws cloudformation deploy --stack-name canary-deployment \
+--template-file canary-deployment.yaml --capabilities \
+CAPABILITY_NAMED_IAM --parameter-overrides SetupStackName=canary-test TemplateBucket=nbrand-code
