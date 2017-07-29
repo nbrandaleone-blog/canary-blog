@@ -18,7 +18,7 @@ Resources:
         WriteCapacityUnits: "1"
       TableName: "canaryTable"
       
-Outputs:
-  TableName:
-    Value: !Ref 'myDynamoDBTable'
-    Description: Table name of the newly created DynamoDB table
+#Outputs:
+#  TableName:
+#    Value: !Ref 'myDynamoDBTable'
+#    Description: Table name of the newly created DynamoDB table

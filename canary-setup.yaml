@@ -6,7 +6,7 @@ Description: >
   It also registers a Route53 domain name for a service.  This domain will point at the blue loadbalancer to start.
   In another template, we will register a new 'green' ECS service with another ALB.  Once the service is running, we shall
   use Route53 to slowly transition traffic from the blue to the green service using weighted Round Robin.  If we detect an error in the new service,
-  we will roll back. The inital transition is done slowly (i.e. a canary service) to give us a chance to catch errors. 
+  we will roll back. The initial transition is done slowly (i.e. a canary service) to give us a chance to catch errors. 
   Then the traffic is quickly moved over as we gain confidence in the service.
   
 Parameters:
