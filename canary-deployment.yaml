@@ -8,7 +8,7 @@ Description: >
 Parameters:
   SetupStackName:
     Type: String
-    Default: "canary-test"
+    Default: "canary-setup"
   TemplateBucket:
     Type: String
     Default: "nbrand-code"
