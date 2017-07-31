@@ -15,27 +15,39 @@ increments.
 ![Diagram 1](images/canary-blue-green.png)
 
 ## Pre-Requisites
-This example uses [AWS Command Line Interface](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-welcome.html) to run Step-3 below.
+This example uses [AWS Command Line Interface](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-welcome.html) to run the steps below.
 
 Please follow [instructions](http://docs.aws.amazon.com/cli/latest/userguide/installing.html) if you haven't installed AWS CLI. Your CLI [configuration](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html) need PowerUserAccess and IAMFullAccess [IAM policies](http://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html) associated with your credentials.
 
+Verify that your AWS CLI is installed and up to date.
 ```console
 aws --version
 ```
-## Quick setup in two steps
+## Get going in four steps
 
-#### 1. Clone this ECS canary blue-green repo
+#### 1. Create a new S3 bucket from which to deploy our source code (ensure that the bucket is created in the same AWS Region as your network and services will be deployed - which should be <us-east-1>):
+
+```console
+$ aws s3 mb s3://<MY_BUCKET_NAME>
+```
+
+#### 2. Clone this repo
 
 ```console
 git clone https://github.com/nbrandaleone/canary-blog.git
 ```
 
-#### 2. Run bin/deploy (verify...)
+#### 3. Run bin/deploy setup script to start your blue "service" 
 ```console
-bin/deploy
+bin/deploy deploy-setup
 ```
 
-The CloudFormation set-up script will create self-contained environment in which to test a canary blue-green deployment. The template has been built and tested for us in US-EAST-1.
+#### 4. Run bin/deploy deployment script to start "green" service
+```console
+bin/deploy deploy-newservice
+```
+
+The first CloudFormation setup script will create a self-contained environment in which to test a canary blue-green deployment. 
 
 Here are the inputs required to launch CloudFormation templates:
   * **S3 Bucket**: Enter S3 Bucket for storing your CloudFormation templates and scripts. This bucket must be in the same region where you wish to launch all the AWS resources created by this example. For now, this region should be <us-east-1>.
@@ -45,189 +57,44 @@ Here are the inputs required to launch CloudFormation templates:
 
 It will take about 15 minutes to create all the resource, so get a cup of coffee. When you return, check out your Route53 hosted zone.  You will have a new one, along with a new VPC and ECS instances plus a running task/service. If your DNS name and subdomain were valid, you can hit those addresses to see your "blue" container response. If not, you can simply watch things work by going to your ALB's directly and observing your StepFunction and Route53 records.
 
+The second CloudFormation template creates the resources that will look for your new "green" container, and react accordingly. As soon as it completes building, it will automatically trigger the canary deployment.
+
 ![Diagram 2](images/canary-flowchart.png)
 
-This solution requires a DynamoDB table to maintain state, and to link your original blue service (and associated LoadBalancer info) with the newer green service.  This is necessary since we will use [Event Streams](http://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs_cwet_handling.html) to trigger the Route53 weights from the blue to the green service.  However, Amazon ECS sends events on an "at least once" basis. This means you may receive more  than a single copy of a given event. Additionally, events may not be delivered to your event listeners in the order in which the events occurred. We will use a small table to keep track of state, so we do not trigger the process more than once. This DynamoDB table is called "CanarTable".
+This solution requires a DynamoDB table to maintain state, and to link your original blue service (and associated LoadBalancer info) with the newer green service.  This is necessary since we will use [Event Streams](http://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs_cwet_handling.html) to trigger the Route53 weights from the blue to the green service.  However, Amazon ECS sends events on an "at least once" basis. This means you may receive more  than a single copy of a given event. Additionally, events may not be delivered to your event listeners in the order in which the events occurred. We will use a small table to keep track of state, so we do not trigger the process more than once. This DynamoDB table is called "CanaryTable".
 
-
-REWRITE!!!!
-## Getting Started
-
-To get started, clone this repository locally:
-
-```
-$ git clone https://github.com/awslabs/aws-vpc-flow-log-appender
-```
-
-The repository contains [CloudFormation](https://aws.amazon.com/cloudformation/) templates and source code to deploy and run the sample application.
-
-### Prerequisites
-
-To run the vpc-flow-log-appender sample, you will need to:
-
-1. Select an AWS Region into which you will deploy services. Be sure that all required services (AWS Lambda, Amazon Elastisearch Service, AWS CloudWatch, and AWS Kinesis Firehose) are available in the Region you select.
-2. Confirm your [installation of the latest AWS CLI](http://docs.aws.amazon.com/cli/latest/userguide/installing.html) (at least version 1.11.21).
-3. Confirm the [AWS CLI is properly configured](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-quick-configuration) with credentials that have administrator access to your AWS account.
-4. [Install Node.js and NPM](https://docs.npmjs.com/getting-started/installing-node).
-## Preparing to Deploy Lambda
-
-Before deploying the sample, install several dependencies using NPM:
-
-```
-$ cd vpc-flow-log-appender/decorator
-$ npm install
-$ cd ../ingestor
-$ npm install
-$ cd ..
-```
-
-## Deploy Lambda Functions
-
-The deployment of our AWS resources is managed by a CloudFormation template using AWS Serverless Application Model.
-
-1. Create a new S3 bucket from which to deploy our source code (ensure that the bucket is created in the same AWS Region as your network and services will be deployed):
-
-    ```
-    $ aws s3 mb s3://<MY_BUCKET_NAME>
-    ```
-
-2. Using the Serverless Application Model, package your source code and serverless stack:
-
-    ```
-    $ aws cloudformation package --template-file app-sam.yaml --s3-bucket <MY_BUCKET_NAME> --output-template-file app-sam-output.yaml
-    ```
-
-3. Once packaging is complete, deploy the stack:
-
-    ```
-    $ aws cloudformation deploy --template-file app-sam-output.yaml --stack-name vpc-flow-log-appender-dev --capabilities CAPABILITY_IAM
-    ```
-
- 4. Once we have deployed our Lambda functions, we need to return to CloudWatch and configure VPC Flow Logs to stream the data to the Lambda function. (TODO: add more detail)
+![Diagram 3](images/dynamo-table.png)
+A sample entry in the DynomoDB table looks like the above diagram. If you want to test out your own services, you will have to update the table AND update the lambda function (blue color in diagram) which filters the Event stream.
 
 ## Testing
 
-In addition to running aws-vpc-flow-log-appender using live VPC Flow Log data from your own environment, we can also leverage the [Kinesis Data Generator](https://awslabs.github.io/amazon-kinesis-data-generator/web/producer.html) to send mock flow log data to our Kinesis Firehose instance.
+Once the second CloudFormation script completes, the new green ECS service will be stared within seconds.  Monitor both the Route53 HostedZone screen, along with the StepFunction console. You will see the weights change slowly at first, and then faster.  The StepFunction has a GUI where you can visualize these changes.
 
+![Diagram 4](images/stepFunction.png)
 A few notes on the above test procedure:
-
-* While our example utilizes the ENI ID of an EC2 instance, you may use any ENI available in the AWS Region in which you deployed the sample code.
-* Feel free to tweak the mock data template if needed, this is only intended to be an example.
-* Do not modify values in double curly braces, these are part of the KDG template and will automatically be filled.
 
 ## Cleaning Up
 
-To clean-up the Lambda functions when you are finished with this sample:
-
-```
-$ aws cloudformation delete-stack --stack-name vpc-flow-log-appender-dev
-## From here down rewrite!
-## Quick setup in three steps
-
-#### 1. Fork ECS Sample app
-
-[Fork](https://help.github.com/articles/fork-a-repo/) the [Amazon ECS sample app](https://github.com/awslabs/ecs-demo-php-simple-app) GitHub repository into your GitHub account.
-
-Clone the ECS Sample app repo 
-```console
-git clone https://github.com/<your_github_username>/ecs-demo-php-simple-app
-```
-
-#### 2. Clone ECS blue green repo
-
-```console
-git clone https://github.com/awslabs/ecs-blue-green-deployment
-```
-
-#### 3. Run bin/deploy
-```console
-bin/deploy
-```
-
-Here are the inputs required to launch CloudFormation templates:
-  * **S3 Bucket**: Enter S3 Bucket for storing your CloudFormation templates and scripts. This bucket must be in the same region where you wish to launch all the AWS resources created by this example.
-    * **CloudFormation Stack Name**: Enter CloudFormation Stack Name to create stacks
-      * **GitHubUser**: Enter your GitHub Username
-        * **GitHubToken**: Enter your GitHub Token for authentication ([https://github.com/settings/tokens](https://github.com/settings/tokens))
-
-        Sit back and relax until all the resources are created for you. After the templates are created, you can open ELB DNS URL to see the ECS Sample App
-
-        For testing Blue Green deployment, Go ahead and make a change in ECS Sample App. For ex, edit src/index.php and update the background-color to #20E941 to change to Green background color. After commiting to your repo, Code Pipeline will pick the change automatically and go through the process of updating your application. 
-
-        Click on "Review" button in Code pipeline management console and Approve the change. Now you should see the new version of the application with Green background. 
-
-        ## Resources created in this exercise
-
-        Count | AWS resources 
-        | --- | --- |
-        7   | [AWS CloudFormation templates](https://aws.amazon.com/cloudformation/)
-        1   | [Amazon VPC](https://aws.amazon.com/vpc/) (10.215.0.0/16)   
-        1  | [AWS CodePipeline](https://aws.amazon.com/codepipeline/) 
-        2  | [AWS CodeBuild projects](https://aws.amazon.com/codebuild/) 
-        1  | [Amazon S3 Bucket](https://aws.amazon.com/s3/) 
-        1  | [AWS Lambda](https://aws.amazon.com/lambda/) 
-        1  | [Amazon ECS Cluster](https://aws.amazon.com/ecs/) 
-        2  | [Amazon ECS Service](https://aws.amazon.com/ecs/) 
-        1  | [Application Load Balancer](https://aws.amazon.com/elasticloadbalancing/applicationloadbalancer/) 
-        2  | [Application Load Balancer Target Groups](https://aws.amazon.com/elasticloadbalancing/applicationloadbalancer/) 
+To clean-up delete the CloudFormation scripts in reverse order. You must delete the ALB records in the Route53 HostedZone manually, or you will get a "delete-failure".
 
 
-        ## Implementation details
-        During first phase, the parent template (ecs-blue-green-deployment.yaml) kicks off creating VPC and the resources in deployment-pipeline template. This creates CodePipeline, CodeBuild and Lambda resources. Once this is complete, second phase creates the rest of resources such as ALB, Target Groups and ECS resources. Below is a screenshot of CodePipeline once all CloudFormation templates are completed
+## Resources created in this exercise <UPDATE>
 
+Count | AWS resources 
+| --- | --- |
+7   | [AWS CloudFormation templates](https://aws.amazon.com/cloudformation/)
+1   | [Amazon VPC](https://aws.amazon.com/vpc/) (10.215.0.0/16)   
+1  | [AWS CodePipeline](https://aws.amazon.com/codepipeline/) 
+2  | [AWS CodeBuild projects](https://aws.amazon.com/codebuild/) 
+1  | [Amazon S3 Bucket](https://aws.amazon.com/s3/) 
+1  | [AWS Lambda](https://aws.amazon.com/lambda/) 
+1  | [Amazon ECS Cluster](https://aws.amazon.com/ecs/) 
+2  | [Amazon ECS Service](https://aws.amazon.com/ecs/) 
+1  | [Application Load Balancer](https://aws.amazon.com/elasticloadbalancing/applicationloadbalancer/) 
+2  | [Application Load Balancer Target Groups](https://aws.amazon.com/elasticloadbalancing/applicationloadbalancer/) 
+ 
 
-        ![codepipeline](images/codepipeline.png)
-
-
-
-        The templates create two services on ECS cluster and associates a Target Group to each service as depicted in the diagram. Blue Target Group is associated with Port 80 that represents Live/Production traffic and Green Target Group is associated with Port 8080 and is available for new version of the Application. During initial rollout, both Blue and Green service serve same application versions. As you introduce new release, CodePipeline picks those changes and are pushed down the pipeline using CodeBuild and deployed to the Green service. In order to switch from Green to Blue service (or from beta to Prod environment), you have to **Approve** the release by going to CodePipeline management console and clicking **Review** button. Approving the change will trigger Lambda function (blue_green_flip.py) which does the swap of ALB Target Groups. If you discover bugs while in Production, you can revert to previous application version by clicking and approving the change again. This in turn will put Blue service back into Production. To simplify identifying which Target Groups are serving Live traffic, we have added Tags on ALB Target Groups. Target Group **IsProduction** Tag will say **true** for Production application. 
-
-
-        ![bluegreen](images/ecs-bluegreen.png)
-
-
-
-        Here is further explaination for each stages of Code Pipeline.  
-
-        <u>**Build stage**</u>
-
-        * During first phase of build stage, CodeBuild builds the docker container image and pushes to [Amazon ECR](https://aws.amazon.com/ecr/).
-         
-         * During second phase, Codebuild executes scripts/deployer.py which executes the following scripted logic
-
-           1. Retrieve artifact (build.json) from the previous phase (CodeBuild phase, which builds application container images)
-             2. Check if the load balancer exists. Name of the ELB is fed through environment variable by the pipeline.
-               3. Get tag key value of the target group, running on port 8080 and 80 with KeyName as "Identifier". It will be either "Code1" or "Code2"
-                 4. Get Sha of the image id running on target group at port 8080 and 80
-                   5. Edit the build.json retrieved from step-1 and append the values retrieved in step3 and step4
-                     6. Save the modified build.json. This file is the output from codebuild project and fed as an input to the CloudFormation
-                          execution stage.This json file has the following schema
-                                {
-                                        "Code1" : "CONTAINER_TAG1",
-                                                "Code2" : "CONTAINER_TAG2"
-                                                      }
-                                                        If the load balancer does not exists (as found in step-2), this would imply that the stack is executed for the first time, and the values of "CONTAINER_TAG1" and CONTAINER_TAG2" will be the same and default to the
-                                                          value retrieved from build.json in step-1
-
-                                                          <u>**Deploy stage**</u>
-                                                          CodePipeline executes templates/ecs-cluster.yaml. The CloudFormation input parameters with KeyName as "Code1" and "Code2" are overwritten with the values as written in the build.json, retrieved from the second phase of Build Stage.
-
-                                                          <u>**Review stage**</u>
-                                                          The pipeline offers manual "Review" button so that the approver can review code and Approve new release.
-                                                          Providing approvals at this stage will trigger the Lambda function (blue_green_flip.py) which swaps the Green Target Group to Live traffic. You can checkout sample app to see new release change. blue_green_flip.py has the following logic scripted
-
-                                                             1. Read Job Data from input json
-                                                                2. Read Job ID from input json
-                                                                   3. Get parameters from input json
-                                                                      4. Get Load balancer name from parameters
-                                                                         5. Identify the TargetGroup running on this Load Balancer at port 80 and port 8080. Perform the TargetGroup Swap. Also swap the values of "IsProduction" tags.
-                                                                            6. Send success or failure to CodePipeline
-
-                                                                            ## Cleanup
-                                                                            First delete ecs-cluster CloudFormation stack, this will delete both ECS services (BlueService and GreenService) and LoadBalancer stacks. Next delete the parent stack. This should delete all the resources that were created for this exercise 
-## CloudFormation template resources
-
-The following sections explains all of the resources created by the CloudFormation template provided with this example.
+<UPDATE>
 
 #### [DeploymentPipeline](templates/deployment-pipeline.yaml)
 
