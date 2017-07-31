@@ -2,14 +2,8 @@ from __future__ import print_function
 
 import boto3
 import json
-import os
 from boto3.dynamodb.conditions import Key, Attr
 from botocore.exceptions import ClientError
-
-# test event. {
-#  "weight": 80,
-#  "target": "green-app"
-#   }
 
 
 client = boto3.client('route53')
@@ -74,14 +68,14 @@ def lambda_handler(event, context):
         print("GetItem succeeded:")
         print(json.dumps(item, indent=4))
         
-    blue_weight = event['weight']
-    green_weight = 100-event['weight']
-    HostedZoneID = item['HostedZoneID']
-    LBZoneID = item['LBZoneID']
-    ServiceName = item['RecordName']
-    fromDNS = item['OldLB']
-    toDNS = item['NewLB']
+        green_weight = event['weight']
+        blue_weight = 100-event['weight']
+        HostedZoneID = item['HostedZoneID']
+        LBZoneID = item['LBZoneID']
+        ServiceName = item['RecordName']
+        fromDNS = item['OldLB']
+        toDNS = item['NewLB']
     
-    resp = change_weights(blue_weight, green_weight, HostedZoneID, LBZoneID, ServiceName, fromDNS, toDNS)
-    print(resp)
-    return target
+        resp = change_weights(blue_weight, green_weight, HostedZoneID, LBZoneID, ServiceName, fromDNS, toDNS)
+        print(resp)
+        return target

@@ -57,3 +57,5 @@ Resources:
 Outputs:
   DNS:
     Value: !Join ['.', [!Ref RecordName, !Ref ZoneName]]
+  HostedZoneID: 
+    Value: !Ref Route53

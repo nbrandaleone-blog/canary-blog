@@ -16,6 +16,7 @@ Parameters:
 Resources:
   handleECSEvents:
     Type: 'AWS::Serverless::Function'
+    DependsOn: StepFunction
     Properties:
       Handler: index.lambda_handler
       Runtime: python2.7
@@ -27,7 +28,8 @@ Resources:
       Description: Handles ECS Events even if there are duplicates or timing issues
       Environment:
         Variables:
-          TRIGGER_CONTAINERS: ['green-app']
+          TRIGGER_CONTAINERS: 'green-app'
+          STEP_FUNCTION: !GetAtt StepFunction.Outputs.StepArn
       MemorySize: 128
       Timeout: 3
       Policies:
@@ -51,8 +53,7 @@ Resources:
 
   Service:
     Type: AWS::CloudFormation::Stack
-    DependsOn: handleECSEvents  # Make sure that lambda function is ready
-    DependsOn: ecstaskstate     # Make sure that DynamoDB table is ready
+    DependsOn: handleECSEvents          # Make sure that lambda function is ready
     DependsOn: handleECSEventsECSStream # Make sure that the Event Stream is ready first
     Properties:
       TemplateURL: !Sub https://s3.amazonaws.com/${TemplateBucket}/templates/greenService.yaml
@@ -62,4 +63,13 @@ Resources:
             !Sub "${SetupStackName}-Cluster" #!GetAtt Cluster.Outputs.ClusterName
         TargetGroup: 
           Fn::ImportValue:
-            !Sub "${SetupStackName}-TG" #!GetAtt LoadBalancer.Outputs.TargetGroup
+            !Sub "${SetupStackName}-TG"      #!GetAtt LoadBalancer.Outputs.TargetGroup
+            
+  StepFunction:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://s3.amazonaws.com/${TemplateBucket}/templates/stepfunction.yaml
+      Parameters:
+        TemplateBucket: 
+          Fn::ImportValue: 
+            !Sub "${SetupStackName}-Bucket"

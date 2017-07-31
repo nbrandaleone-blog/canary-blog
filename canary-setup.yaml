@@ -99,6 +99,12 @@ Resources:
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: !Sub https://s3.amazonaws.com/${TemplateBucket}/templates/dynamo.yaml
+      Parameters:
+        DNSName: !GetAtt Route53.Outputs.DNS
+        OldLB: !GetAtt LoadBalancer.Outputs.DNSName
+        NewLB: !GetAtt NewLB.Outputs.DNSName
+        HostedZoneID: !GetAtt Route53.Outputs.HostedZoneID
+        LBZoneID: !GetAtt LoadBalancer.Outputs.CanonicalZone
         
 Outputs:
   DNS:

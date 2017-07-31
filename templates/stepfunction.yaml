@@ -1,7 +1,10 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: >
-  The StepFunction which controls how the canary rolls forward, or backward.
+Description: The StepFunction which controls how the canary rolls forward, or backward
 
+Parameters:
+  TemplateBucket:
+    Type: String
+    
 Resources:
   LambdaExecutionRole:
     Type: "AWS::IAM::Role"
@@ -13,19 +16,39 @@ Resources:
             Principal:
               Service: lambda.amazonaws.com
             Action: "sts:AssumeRole"
+      Path: "/"
+      Policies:
+      - PolicyName: root
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:*
+          - Effect: Allow
+            Action:
+            - dynamodb:*
+            Resource: "*"
+          - Effect: Allow
+            Action:
+            - route53:*
+            Resource: "*"
 
   MyLambdaFunction:
     Type: "AWS::Lambda::Function"
     Properties:
-      Handler: "index.handler"
+      Handler: lambda_function.lambda_handler  # <file_name [excluding .py]>.<entry_point>
       Role: !GetAtt [ LambdaExecutionRole, Arn ]
       Code:
-        ZipFile: |
-          exports.handler = (event, context, callback) => {
-              callback(null, "Hello World!");
-          };
-      Runtime: "nodejs4.3"
-      Timeout: "25"
+        S3Bucket: !Ref TemplateBucket # no s3:// in prefix
+        S3Key: lambdafunctions/changeRoute53Weights.zip
+      Description: Updates Route53 with new weights
+      Runtime: "python3.6"
+      MemorySize: 128
+      Timeout: 3
 
   StatesExecutionRole:
     Type: "AWS::IAM::Role"
@@ -61,35 +84,61 @@ Resources:
               "States": {
                 "FirstState": {
                   "Type": "Pass",
-                  "Result": { "weight": 10 },
+                  "Result": 10,
+                  "ResultPath":"$.weight",
                   "Next": "change_10_percent"
                 },
                 "change_10_percent": {
                   "Type": "Task",
-                  "Resource": "arn:aws:lambda:us-east-1:991225764181:function:changeWeights",
-                  "Next": "wait_60_seconds"
+                  "Resource": "${lambdaArn}",
+                  "ResultPath":"$.target",
+                  "TimeoutSeconds":3,
+                  "Next": "wait_60_secondsA"
                 },
-                "wait_60_seconds": {
+                "wait_60_secondsA": {
                   "Type": "Wait",
                   "Seconds": 60,
                   "Next": "send_50"
                 },
                 "send_50": {
                   "Type": "Pass",
-                  "Result": { "weight": 50 },
+                  "Result": 50,
+                  "InputPath":"$.target",
+                  "ResultPath":"$.weight",
                   "Next": "change_50_percent"
                   },
                 "change_50_percent": {
                   "Type": "Task",
-                  "Resource": "arn:aws:lambda:us-east-1:991225764181:function:changeWeights",
-                  "Next": "FinalState"
+                  "Resource": "${lambdaArn}",
+                  "ResultPath":"$.target",
+                  "TimeoutSeconds":3,
+                  "Next": "wait_60_secondsB"
                   },
-                "FinalState": {
+                "wait_60_secondsB": {
                   "Type": "Wait",
-                  "Seconds": 1,
-                  "End": true
+                  "Seconds": 60,
+                  "Next": "send_100"
+                },
+                "send_100": {
+                  "Type": "Pass",
+                  "Result": 100,
+                  "InputPath":"$.target",
+                  "ResultPath":"$.weight",
+                  "Next": "change_100_percent"
+                  },
+                "change_100_percent": {
+                  "Type": "Task",
+                  "Resource": "${lambdaArn}",
+                  "ResultPath":"$.target",
+                  "TimeoutSeconds":3,
+                  "End":true
                 }
               }
             }
           - {lambdaArn: !GetAtt [ MyLambdaFunction, Arn ]}
       RoleArn: !GetAtt [ StatesExecutionRole, Arn ]
+
+Outputs:
+  StepArn:
+    Description: The ARN of the StepFunction.  This is needed by the handleECSEvents lambda
+    Value: !Ref MyStateMachine

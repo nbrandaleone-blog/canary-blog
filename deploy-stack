@@ -1,4 +1,4 @@
-aws cloudformation deploy --stack-name canary-test --template-file canary-setup.yaml \
+aws cloudformation deploy --stack-name canary-setup --template-file canary-setup.yaml \
 --capabilities CAPABILITY_NAMED_IAM --parameter-overrides RecordSetName=myservice \
 HostedZoneName=test.net. TemplateBucket=nbrand-code
 

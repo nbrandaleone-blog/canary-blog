@@ -71,16 +71,12 @@ Resources:
 Outputs:
   TargetGroup:
     Value: !Ref TargetGroup
-
   ServiceUrl:
     Description: URL of the load balancer for the sample service.
     Value: !Sub http://${LoadBalancer.DNSName}
-
   CanonicalZone:
     Value: !GetAtt LoadBalancer.CanonicalHostedZoneID
-    
   DNSName:
     Value: !GetAtt LoadBalancer.DNSName
-    
   SecurityGroup:
     Value: !Ref SecurityGroup

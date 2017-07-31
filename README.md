@@ -3,12 +3,12 @@
 This reference architecture is a companion to the blog post on 
 [canary blue green deployments on ECS](https://aws.amazon.com/blogs/compute/ecs.../). 
 In order to provide an automated and safe method of migrating traffic from a blue deployment
-to a green one, it leverages Route53 weights to adjust the traffic flow from one service to another.
-It associates a new service with a separate Application Load Balancer, leveraging ECS Event Streams 
+to a green one, this solution leverages Route53 weights to adjust the traffic flow from one ECS service to another.
+We associate a new service with a separate Application Load Balancer, leveraging ECS Event Streams 
 to trigger the deployment. Once triggered, Step Functions handle the transitioning of traffic 
 off of the blue ALB to the green one. If the Step Function detects a failure of the green service,
 it will automatically fail-back to the original configuration. This solution does not destroy the original service, 
-so it does offer a safe and reliable method of transitioning traffic, including natural "connection-draining".
+so it does offer a safe and reliable method of transitioning traffic, including natural "connection-draining". Users will have to shutdown their old "blue" infrastructure manually once the cut-over is complete.
 The one concern users may have is that DNS propogation delay of approximately 60 seconds will be introduced between migration
 increments.
 
@@ -17,20 +17,40 @@ increments.
 ## Pre-Requisites
 This example uses [AWS Command Line Interface](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-welcome.html) to run Step-3 below.
 
-Pease follow [instructions](http://docs.aws.amazon.com/cli/latest/userguide/installing.html) if you haven't installed AWS CLI. Your CLI [configuration](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html) need PowerUserAccess and IAMFullAccess [IAM policies](http://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html) associated with your credentials
+Please follow [instructions](http://docs.aws.amazon.com/cli/latest/userguide/installing.html) if you haven't installed AWS CLI. Your CLI [configuration](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html) need PowerUserAccess and IAMFullAccess [IAM policies](http://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html) associated with your credentials.
 
 ```console
 aws --version
 ```
+## Quick setup in two steps
 
-Output from above must yield **AWS CLI version >= 1.11.37** 
+#### 1. Clone this ECS canary blue-green repo
 
-The CloudFormation set-up script will create a DynamoDB table to maintain state. 
-This is necessary since we use [Event Streams](http://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs_cwet_handling.html) to trigger
-the Route53 weights from the blue to the green service.  However, Amazon ECS sends events on an "at least once" basis. This means you may receive more 
-than a single copy of a given event. Additionally, events may not be delivered to your event listeners in the order in which the events occurred.
-We will use a small table to keep track of state, so we do not trigger the process more than once.
+```console
+git clone https://github.com/nbrandaleone/canary-blog.git
+```
 
+#### 2. Run bin/deploy (verify...)
+```console
+bin/deploy
+```
+
+The CloudFormation set-up script will create self-contained environment in which to test a canary blue-green deployment. The template has been built and tested for us in US-EAST-1.
+
+Here are the inputs required to launch CloudFormation templates:
+  * **S3 Bucket**: Enter S3 Bucket for storing your CloudFormation templates and scripts. This bucket must be in the same region where you wish to launch all the AWS resources created by this example. For now, this region should be <us-east-1>.
+  * **CloudFormation Stack Name**: Enter CloudFormation Stack Name to create stacks. Defaults to "canary-setup".
+  * **HostedNameZone**: Your domain name. Defaults to "test.net."
+  * **RecordSetName**: Enter your sub-domain name. This will point at your Application Load Balancer, where your ECS Service will be registered. Defaults to "myservice".
+
+It will take about 15 minutes to create all the resource, so get a cup of coffee. When you return, check out your Route53 hosted zone.  You will have a new one, along with a new VPC and ECS instances plus a running task/service. If your DNS name and subdomain were valid, you can hit those addresses to see your "blue" container response. If not, you can simply watch things work by going to your ALB's directly and observing your StepFunction and Route53 records.
+
+![Diagram 2](images/canary-flowchart.png)
+
+This solution requires a DynamoDB table to maintain state, and to link your original blue service (and associated LoadBalancer info) with the newer green service.  This is necessary since we will use [Event Streams](http://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs_cwet_handling.html) to trigger the Route53 weights from the blue to the green service.  However, Amazon ECS sends events on an "at least once" basis. This means you may receive more  than a single copy of a given event. Additionally, events may not be delivered to your event listeners in the order in which the events occurred. We will use a small table to keep track of state, so we do not trigger the process more than once. This DynamoDB table is called "CanarTable".
+
+
+REWRITE!!!!
 ## Getting Started
 
 To get started, clone this repository locally:
