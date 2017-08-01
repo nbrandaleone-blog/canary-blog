@@ -1,4 +1,4 @@
-# Canary Blue/Green deployments on ECS
+# Canary Blue/Green deployments on ECS *DRAFT*
 
 This reference architecture is a companion to the blog post on 
 [canary blue green deployments on ECS](https://aws.amazon.com/blogs/compute/ecs.../). 
