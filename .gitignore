@@ -3,4 +3,5 @@ research/
 update-all
 deploy-stack
 deploy-newservice
-
+how_to_add_library.txt
+how_to_deploy_lambda.txt
