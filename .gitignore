@@ -5,3 +5,6 @@ deploy-stack
 deploy-newservice
 how_to_add_library.txt
 how_to_deploy_lambda.txt
+pyvenv.cfg
+pip-selfcheck.json
+scripts/test_url.py
