@@ -25,7 +25,7 @@ aws --version
 ```
 ## Get going in by following these steps
 
-#### 1. Create a new S3 bucket from which to deploy our source code (ensure that the bucket is created in the same AWS Region as your network and services will be deployed - which should be <us-east-1>):
+#### 1. Create a new S3 bucket from which to deploy our source code (ensure that the bucket is created in the same AWS Region as your network and services will be deployed - which should be *us-east-1*):
 
 ```console
 aws s3 mb s3://<MY_BUCKET_NAME>
