@@ -5,7 +5,7 @@ This reference architecture is a companion to the blog post on
 In order to provide an automated and safe method of migrating traffic from a blue deployment
 to a green one, this solution leverages Route53 weights to adjust the traffic flow from one ECS service to another.
 We associate a new service with a separate Application Load Balancer, leveraging ECS Event Streams 
-to trigger the deployment. Once triggered, Step Functions handle the transitioning of traffic 
+to trigger the deployment. Once triggered, [Step Functions](https://aws.amazon.com/step-functions/) handle the transitioning of traffic 
 off of the blue ALB to the green one. If the Step Function detects a failure of the green service,
 it will automatically fail-back to the original configuration. This solution does not destroy the original service, 
 so it does offer a safe and reliable method of transitioning traffic, including natural "connection-draining". Users will have to shutdown their old "blue" infrastructure manually once the cut-over is complete.
@@ -61,7 +61,7 @@ Here are the inputs required to launch CloudFormation templates:
   * **HostedNameZone**: Your domain name. For example "test.net."
   * **RecordSetName**: Enter your sub-domain name. This will point at your Application Load Balancer, where your ECS Service will be registered. For example "myservice".
 
-It will take about 15 minutes to create all the resource, so get a cup of coffee. When you return, check out your Route53 hosted zone.  You will have a new one, along with a new VPC and ECS instances plus a running task/service. If your DNS name and subdomain were valid, you can hit those addresses to see your "blue" container response. If not, you can simply watch things work by going to your ALB's directly and observing your StepFunction and Route53 records.
+It will take about 15 minutes to create all the resource, so get a cup of coffee. When you return, check out your Route53 hosted zone.  You will have a new one, along with a new VPC and ECS instances plus a running task/service. If your DNS name and subdomain were valid, you can hit those addresses to see your *blue* container response. If not, you can simply watch things work by going to your ALB's directly and observing your StepFunction and Route53 records.
 
 #### 5. Create the CloudFormation stack for green service deployment
 ```console
@@ -88,7 +88,6 @@ If you want to test it again, do the following:
 the process, and you will notice the Route53 weights changing, and the StepFunction firing again.
 
 ![Diagram 4](images/stepFunction.png)
-A few notes on the above test procedure: <UPDATE>
 
 ## Cleaning Up
 
@@ -96,7 +95,7 @@ To clean-up delete the CloudFormation scripts in reverse order. You must delete 
 Do not forget you delete your S3 bucket.
 
 
-## Resources created in this exercise <UPDATE>
+## Resources created in this exercise *UPDATE*
 
 Count | AWS resources 
 | --- | --- |
@@ -112,7 +111,7 @@ Count | AWS resources
 2  | [Application Load Balancer Target Groups](https://aws.amazon.com/elasticloadbalancing/applicationloadbalancer/) 
  
 
-<UPDATE>
+*UPDATE*
 
 #### [DeploymentPipeline](templates/deployment-pipeline.yaml)
 
