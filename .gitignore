@@ -8,3 +8,4 @@ how_to_deploy_lambda.txt
 pyvenv.cfg
 pip-selfcheck.json
 scripts/test_url.py
+lib/
