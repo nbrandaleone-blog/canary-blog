@@ -23,7 +23,7 @@ Verify that your AWS CLI is installed and up to date.
 ```console
 aws --version
 ```
-## Get going in four steps
+## Get going in by following these steps
 
 #### 1. Create a new S3 bucket from which to deploy our source code (ensure that the bucket is created in the same AWS Region as your network and services will be deployed - which should be <us-east-1>):
 
@@ -37,27 +37,40 @@ $ aws s3 mb s3://<MY_BUCKET_NAME>
 git clone https://github.com/nbrandaleone/canary-blog.git
 ```
 
-#### 3. Run bin/deploy setup script to start your blue "service" 
+#### 3. Copy all templates and scripts into your bucket
 ```console
-bin/deploy deploy-setup
+aws s3 cp canary-setup.yaml s3://<MY_BUCKET_NAME>
+aws s3 cp canary-deployment.yaml s3://<MY_BUCKET_NAME>
+aws s3 cp --recursive templates s3://s3://<MY_BUCKET_NAME>/templates
+aws s3 cp --recursive lambdafunctions s3://s3://<MY_BUCKET_NAME>/lambdafunctions
 ```
 
-#### 4. Run bin/deploy deployment script to start "green" service
+#### 4. Create the CloudFormation stack for base setup
 ```console
-bin/deploy deploy-newservice
+aws cloudformation deploy --stack-name <STACK_NAME. For example "canary-setup"> --template-file canary-setup.yaml \
+--capabilities CAPABILITY_NAMED_IAM --parameter-overrides RecordSetName=<MY_SERVICE_NAME. For example "myservice"> \
+HostedZoneName=<DOMAIN_NAME. For example "test.net."> TemplateBucket=<MY_BUCKET_NAME>
 ```
 
-The first CloudFormation setup script will create a self-contained environment in which to test a canary blue-green deployment. 
+The first CloudFormation setup script will create a self-contained environment in which to test a canary blue-green deployment.
+It also creates a Route53 Hosted Zone and subdomain, along with a running ECS service, which we will consider the *blue* service. 
 
 Here are the inputs required to launch CloudFormation templates:
   * **S3 Bucket**: Enter S3 Bucket for storing your CloudFormation templates and scripts. This bucket must be in the same region where you wish to launch all the AWS resources created by this example. For now, this region should be <us-east-1>.
-  * **CloudFormation Stack Name**: Enter CloudFormation Stack Name to create stacks. Defaults to "canary-setup".
-  * **HostedNameZone**: Your domain name. Defaults to "test.net."
-  * **RecordSetName**: Enter your sub-domain name. This will point at your Application Load Balancer, where your ECS Service will be registered. Defaults to "myservice".
+  * **CloudFormation Stack Name**: Enter CloudFormation Stack Name to create stacks. For example "canary-setup".
+  * **HostedNameZone**: Your domain name. For example "test.net."
+  * **RecordSetName**: Enter your sub-domain name. This will point at your Application Load Balancer, where your ECS Service will be registered. For example "myservice".
 
 It will take about 15 minutes to create all the resource, so get a cup of coffee. When you return, check out your Route53 hosted zone.  You will have a new one, along with a new VPC and ECS instances plus a running task/service. If your DNS name and subdomain were valid, you can hit those addresses to see your "blue" container response. If not, you can simply watch things work by going to your ALB's directly and observing your StepFunction and Route53 records.
 
-The second CloudFormation template creates the resources that will look for your new "green" container, and react accordingly. As soon as it completes building, it will automatically trigger the canary deployment.
+#### 5. Create the CloudFormation stack for green service deployment
+```console
+aws cloudformation deploy --stack-name <STACK_NAME. For example "canary-deployment"> --template-file canary-deployment.yaml \
+--capabilities CAPABILITY_NAMED_IAM \
+--parameter-overrides SetupStackName=<OLD_STACK_NAME. For example "canary-setup"> TemplateBucket=<MY_BUCKET_NAME>
+```
+
+The second CloudFormation template creates your *green* service and the resources that will look for your new *green* container, and react accordingly. As soon as it completes building, it will automatically trigger the canary deployment.
 
 ![Diagram 2](images/canary-flowchart.png)
 
@@ -69,13 +82,18 @@ A sample entry in the DynomoDB table looks like the above diagram. If you want t
 ## Testing
 
 Once the second CloudFormation script completes, the new green ECS service will be stared within seconds.  Monitor both the Route53 HostedZone screen, along with the StepFunction console. You will see the weights change slowly at first, and then faster.  The StepFunction has a GUI where you can visualize these changes.
+If you want to test it again, do the following:
+1. Reset your *Triggered* item in the DynamoDB table to "false", for the "green-app" index.
+2. Stop your ECS task, which is associated with your *green-app* container. Once the ECS service notices it is dead, it will restart it.  This will re-trigger
+the process, and you will notice the Route53 weights changing, and the StepFunction firing again.
 
 ![Diagram 4](images/stepFunction.png)
-A few notes on the above test procedure:
+A few notes on the above test procedure: <UPDATE>
 
 ## Cleaning Up
 
 To clean-up delete the CloudFormation scripts in reverse order. You must delete the ALB records in the Route53 HostedZone manually, or you will get a "delete-failure".
+Do not forget you delete your S3 bucket.
 
 
 ## Resources created in this exercise <UPDATE>
