@@ -1,0 +1,6 @@
+bin/
+research/
+update-all
+deploy-stack
+deploy-newservice
+
