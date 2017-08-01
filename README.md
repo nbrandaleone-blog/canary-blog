@@ -47,8 +47,9 @@ aws s3 cp --recursive lambdafunctions s3://<MY_BUCKET_NAME>/lambdafunctions
 
 #### 4. Create the CloudFormation stack for base setup
 ```console
-aws cloudformation deploy --stack-name <STACK_NAME. For example "canary-setup"> --template-file canary-setup.yaml \
---capabilities CAPABILITY_NAMED_IAM --parameter-overrides RecordSetName=<MY_SERVICE_NAME. For example "myservice"> \
+aws cloudformation deploy --stack-name <STACK_NAME. For example "canary-setup"> \
+--template-file canary-setup.yaml --capabilities CAPABILITY_NAMED_IAM \
+--parameter-overrides RecordSetName=<MY_SERVICE_NAME. For example "myservice"> \
 HostedZoneName=<DOMAIN_NAME. For example "test.net."> TemplateBucket=<MY_BUCKET_NAME>
 ```
 
@@ -65,8 +66,8 @@ It will take about 15 minutes to create all the resource, so get a cup of coffee
 
 #### 5. Create the CloudFormation stack for green service deployment
 ```console
-aws cloudformation deploy --stack-name <STACK_NAME. For example "canary-deployment"> --template-file canary-deployment.yaml \
---capabilities CAPABILITY_NAMED_IAM \
+aws cloudformation deploy --stack-name <STACK_NAME. For example "canary-deployment"> \
+--template-file canary-deployment.yaml --capabilities CAPABILITY_NAMED_IAM \
 --parameter-overrides SetupStackName=<OLD_STACK_NAME. For example "canary-setup"> TemplateBucket=<MY_BUCKET_NAME>
 ```
 
