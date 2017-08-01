@@ -41,8 +41,8 @@ git clone https://github.com/nbrandaleone/canary-blog.git
 ```console
 aws s3 cp canary-setup.yaml s3://<MY_BUCKET_NAME>
 aws s3 cp canary-deployment.yaml s3://<MY_BUCKET_NAME>
-aws s3 cp --recursive templates s3://s3://<MY_BUCKET_NAME>/templates
-aws s3 cp --recursive lambdafunctions s3://s3://<MY_BUCKET_NAME>/lambdafunctions
+aws s3 cp --recursive templates s3://<MY_BUCKET_NAME>/templates
+aws s3 cp --recursive lambdafunctions s3://<MY_BUCKET_NAME>/lambdafunctions
 ```
 
 #### 4. Create the CloudFormation stack for base setup
