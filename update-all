@@ -1,4 +1,0 @@
-aws s3 cp canary-setup.yaml s3://nbrand-code/
-aws s3 cp canary-deployment.yaml s3://nbrand-code/
-aws s3 cp --recursive templates s3://nbrand-code/templates
-aws s3 cp --recursive lambdafunctions s3://nbrand-code/lambdafunctions
