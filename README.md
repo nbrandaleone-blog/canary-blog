@@ -23,7 +23,7 @@ Verify that your AWS CLI is installed and up to date.
 ```console
 aws --version
 ```
-## Get going in by following these steps
+## Get going by following these steps
 
 #### 1. Create a new S3 bucket from which to deploy our source code (ensure that the bucket is created in the same AWS Region as your network and services will be deployed - which should be *us-east-1*):
 
