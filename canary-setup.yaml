@@ -35,6 +35,9 @@ Metadata:
         
 Resources:
   Cluster:
+    DependsOn: VPC
+    DependsOn: LoadBalancer
+    DependsOn: NewLB
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: !Sub https://s3.amazonaws.com/${TemplateBucket}/templates/ecs-cluster.yaml
@@ -45,6 +48,7 @@ Resources:
         VpcId: !GetAtt VPC.Outputs.VpcId
 
   LoadBalancer:
+    DependsOn: VPC
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: !Sub https://s3.amazonaws.com/${TemplateBucket}/templates/load-balancer.yaml
@@ -54,6 +58,7 @@ Resources:
 
   NewLB:
     Type: AWS::CloudFormation::Stack
+    DependsOn: VPC
     Properties:
       TemplateURL: !Sub https://s3.amazonaws.com/${TemplateBucket}/templates/load-balancer.yaml
       Parameters:
@@ -71,6 +76,8 @@ Resources:
         Subnet2CIDR: 192.168.20.0/24
 
   Service:
+    DependsOn: Cluster
+    DependsOn: LoadBalancer
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: !Sub https://s3.amazonaws.com/${TemplateBucket}/templates/blueService.yaml
@@ -93,6 +100,9 @@ Resources:
     
   myDynamoDBTable:
     Type: AWS::CloudFormation::Stack
+    DependsOn: LoadBalancer
+    DependsOn: NewLB
+    DependsOn: Route53
     Properties:
       TemplateURL: !Sub https://s3.amazonaws.com/${TemplateBucket}/templates/dynamo.yaml
       Parameters:
@@ -101,7 +111,7 @@ Resources:
         NewLB: !GetAtt NewLB.Outputs.DNSName
         HostedZoneID: !GetAtt Route53.Outputs.HostedZoneID
         LBZoneID: !GetAtt LoadBalancer.Outputs.CanonicalZone
-        TargetGroup: !Ref LoadBalancer.Outputs.TargetGroup
+        TargetGroup: !GetAtt NewLB.Outputs.TargetGroup
         
 Outputs:
   DNS:
