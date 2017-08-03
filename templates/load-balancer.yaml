@@ -1,4 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
+Description: Creates an Application Load Balancer, which will front-end an ECS Service
+  
 Parameters:
   VpcId:
     Type: String

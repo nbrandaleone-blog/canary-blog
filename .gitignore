@@ -9,3 +9,4 @@ pyvenv.cfg
 pip-selfcheck.json
 scripts/
 lib/
+templates/statemachinetest.yaml

@@ -1,4 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
+Description: Creates an ECS cluster, consisting of a single t2.small instance
+
 Parameters:
   InstanceType:
     Type: String

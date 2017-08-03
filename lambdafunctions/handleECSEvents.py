@@ -46,7 +46,8 @@ def running(target):
     # Has the container tripped a canary execution already?
     try:
         response = table.get_item(
-            Key={ 'NewContainerName': target }
+            Key={ 'NewContainerName': target },
+            ConsistentRead = True
         )
     except ClientError as e:
         print(e.response['Error']['Message'])

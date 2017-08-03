@@ -1,4 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
+Description: This template creates an ECS service, which creates a static web-page with the words 'BLUE-SERVICE' on it.
+  
 Parameters:
   DesiredCount:
     Type: Number

@@ -4,10 +4,6 @@ Description: >
   A CloudFormation template to create an ECS canary blue-green deployment environment. 
   This template creates a VPC, an ECS cluster, with a task and service registered to a 'blue' loadbalancer.
   It also registers a Route53 domain name for a service.  This domain will point at the blue loadbalancer to start.
-  In another template, we will register a new 'green' ECS service with another ALB.  Once the service is running, we shall
-  use Route53 to slowly transition traffic from the blue to the green service using weighted Round Robin.  If we detect an error in the new service,
-  we will roll back. The initial transition is done slowly (i.e. a canary service) to give us a chance to catch errors. 
-  Then the traffic is quickly moved over as we gain confidence in the service.
   
 Parameters:
   RecordSetName:
@@ -105,6 +101,7 @@ Resources:
         NewLB: !GetAtt NewLB.Outputs.DNSName
         HostedZoneID: !GetAtt Route53.Outputs.HostedZoneID
         LBZoneID: !GetAtt LoadBalancer.Outputs.CanonicalZone
+        TargetGroup: !Ref LoadBalancer.Outputs.TargetGroup
         
 Outputs:
   DNS:

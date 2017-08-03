@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: A CloudFormation template which creates an green ECS task/service 
+Description: This template creates an ECS service, which creates a static web-page with the words 'GREEN-SERVICE' on it.
   
 Parameters:
   DesiredCount:

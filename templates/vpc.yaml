@@ -1,6 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
   Create VPC resources for Canary Blue/Green Deployment on ECS.
+  Uses CIDR blocks 192.168.10.0/24 192.168.20.0/24 for subnets.
   
 Parameters:
   Name:

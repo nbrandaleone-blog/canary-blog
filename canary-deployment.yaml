@@ -1,9 +1,9 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  This series of templates creates the lambda functions, Step Functions, dynamoDB table and Events Streams required to trigger and execute
-  the switch from one service to another. It assumes that the ECS cluster, services, load-balancers, tasks, etc... have been created
-  and are working. That infrastucture is created by the "canary-setup" CloudFormation template. 
+  This template creates the lambda functions, Step Functions, and CloudWatch Events Streams 
+  required to trigger and execute the switch from one ECS service to another. It also creates
+  the blue ECS service - so upon completion the trigger should fire and the canary switch should start.
   
 Parameters:
   SetupStackName:
