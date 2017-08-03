@@ -10,3 +10,5 @@ pip-selfcheck.json
 scripts/
 lib/
 templates/statemachinetest.yaml
+lambdafunctions/ecs-cw-events.py
+lambdafunctions/monitor-ecs-events.py
