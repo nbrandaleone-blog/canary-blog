@@ -74,25 +74,33 @@ aws cloudformation deploy --stack-name <STACK_NAME. For example "canary-deployme
 --region us-east-1 \
 --parameter-overrides SetupStackName=<OLD_STACK_NAME. For example "canary-setup"> TemplateBucket=<MY_BUCKET_NAME>
 ```
-![Diagram 2](images/canary-flowchart.png)
 
 The second CloudFormation template creates your *green* service. It also makes the resources that will look for your new
 replacement container (*green-app*), and react accordingly. As soon as the template completes building, 
 it will automatically trigger the canary deployment.
 
+Here is the logical flow of how the solution works. We will discuss each component below.
+
+![Diagram 2](images/canary-flowchart.png)
+
+The first component is [ECS Events](http://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs_cwe_events.html),
+which tracks container or task changes. We are intersted in being notified once a new task is _RUNNING_.
+We tell [CloudWatch Events](http://docs.aws.amazon.com/AmazonCloudWatch/latest/events/WhatIsCloudWatchEvents.html)
+to send notification to a Lambda function, which will discriminate the event stream, focusing only
+on those relevant to our canary deployment.
+
 ![Diagram 3](images/eventstream.png)
 
 This solution requires a DynamoDB table to maintain state, and to link your original *blue* service 
-(and associated LoadBalancer info) with the newer green service and Route53 domain information.  
-This is necessary since we will use 
-[EventStreams](http://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs_cwet_handling.html) 
-to trigger the Route53 weights from the *blue* to the *green* service.  However, since Amazon ECS Events sends events 
+with its newer *green* service and pertinent related information.  
+This is necessary since Amazon ECS Events can send events 
 on an "at least once" basis; this means you may receive more than a single copy of a given event. 
 Additionally, events may not be delivered to your event listeners in the order in which the events occurred. 
 We will use a small table to keep track of state, so we do not trigger the process more than once. 
 This DynamoDB table is called "CanaryTable".
 
 ![Diagram 3](images/dynamo-table.png)
+
 A sample entry in the DynomoDB table looks like the above diagram. If you want to test out your own services, you will have to update the table AND update the lambda function (blue color in diagram) which filters the Event stream.
 
 ## Testing
