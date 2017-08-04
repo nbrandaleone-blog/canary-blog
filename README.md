@@ -1,16 +1,17 @@
 # Canary Blue/Green deployments on ECS *DRAFT*
 
-This reference architecture is a companion to the blog post on 
-[canary blue green deployments on ECS](https://aws.amazon.com/blogs/compute/ecs.../). 
-In order to provide an automated and safe method of migrating traffic from a blue deployment
-to a green one, this solution leverages Route53 weights to adjust the traffic flow from one ECS service to another.
+This reference architecture demonstrates how to execute a canary deployment for Elastic Container Service. 
+In order to provide an automated and safe method of migrating traffic from a *blue* deployment
+to a *green* one, this solution leverages Route53 weights to adjust the traffic flow from one ECS service to another.
 We associate a new service with a separate Application Load Balancer, leveraging ECS Event Streams 
-to trigger the deployment. Once triggered, [Step Functions](https://aws.amazon.com/step-functions/) handle the transitioning of traffic 
-off of the blue ALB to the green one. If the Step Function detects a failure of the green service,
-it will automatically fail-back to the original configuration. This solution does not destroy the original service, 
-so it does offer a safe and reliable method of transitioning traffic, including natural "connection-draining". Users will have to shutdown their old "blue" infrastructure manually once the cut-over is complete.
-The one concern users may have is that DNS propogation delay of approximately 60 seconds will be introduced between migration
-increments.
+to trigger the deployment. Once triggered, [Step Functions](https://aws.amazon.com/step-functions/) handle 
+the transitioning of traffic off of the *blue* ALB to the *green* one. If the Step Function detects a failure 
+of the *green* service, it will automatically fail-back to the original configuration. 
+This solution does not destroy the original service, so it does offer a safe and reliable method of transitioning 
+traffic, including natural "connection-draining". Users will have to terminate their old *blue* infrastructure 
+manually once the cut-over is complete.
+The one concern users may have is that DNS propogation delay of approximately 60 seconds will be introduced 
+between migration increments.
 
 ![Diagram 1](images/canary-blue-green.png)
 
@@ -54,7 +55,8 @@ aws cloudformation deploy --stack-name <STACK_NAME. For example "canary-setup"> 
 HostedZoneName=<DOMAIN_NAME. For example "test.net."> TemplateBucket=<MY_BUCKET_NAME>
 ```
 
-The first CloudFormation setup script will create a self-contained environment in which to test a canary blue-green deployment.
+The first CloudFormation setup script will create a self-contained environment in which to test a canary 
+blue-green deployment.
 It also creates a Route53 Hosted Zone and subdomain, along with a running ECS service, which we will consider the *blue* service. 
 
 Here are the inputs required to launch CloudFormation templates:
@@ -72,75 +74,70 @@ aws cloudformation deploy --stack-name <STACK_NAME. For example "canary-deployme
 --region us-east-1 \
 --parameter-overrides SetupStackName=<OLD_STACK_NAME. For example "canary-setup"> TemplateBucket=<MY_BUCKET_NAME>
 ```
-
-The second CloudFormation template creates your *green* service and the resources that will look for your new *green* container, and react accordingly. As soon as it completes building, it will automatically trigger the canary deployment.
-
 ![Diagram 2](images/canary-flowchart.png)
 
-This solution requires a DynamoDB table to maintain state, and to link your original blue service (and associated LoadBalancer info) with the newer green service.  This is necessary since we will use [Event Streams](http://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs_cwet_handling.html) to trigger the Route53 weights from the blue to the green service.  However, Amazon ECS sends events on an "at least once" basis. This means you may receive more  than a single copy of a given event. Additionally, events may not be delivered to your event listeners in the order in which the events occurred. We will use a small table to keep track of state, so we do not trigger the process more than once. This DynamoDB table is called "CanaryTable".
+The second CloudFormation template creates your *green* service. It also makes the resources that will look for your new
+replacement container (*green-app*), and react accordingly. As soon as the template completes building, 
+it will automatically trigger the canary deployment.
+
+![Diagram 3](images/eventstream.png)
+
+This solution requires a DynamoDB table to maintain state, and to link your original *blue* service 
+(and associated LoadBalancer info) with the newer green service and Route53 domain information.  
+This is necessary since we will use 
+[EventStreams](http://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs_cwet_handling.html) 
+to trigger the Route53 weights from the *blue* to the *green* service.  However, since Amazon ECS Events sends events 
+on an "at least once" basis; this means you may receive more than a single copy of a given event. 
+Additionally, events may not be delivered to your event listeners in the order in which the events occurred. 
+We will use a small table to keep track of state, so we do not trigger the process more than once. 
+This DynamoDB table is called "CanaryTable".
 
 ![Diagram 3](images/dynamo-table.png)
 A sample entry in the DynomoDB table looks like the above diagram. If you want to test out your own services, you will have to update the table AND update the lambda function (blue color in diagram) which filters the Event stream.
 
 ## Testing
 
-Once the second CloudFormation script completes, the new green ECS service will be stared within seconds.  Monitor both the Route53 HostedZone screen, along with the StepFunction console. You will see the weights change slowly at first, and then faster.  The StepFunction has a GUI where you can visualize these changes.
+Once the second CloudFormation script completes, the new *green* ECS service will be stared within seconds.  
+Monitor both the Route53 HostedZone screen, along with the StepFunction console. You will see the weights 
+change slowly at first, and then faster.  The StepFunction has a GUI where you can visualize these changes.
 If you want to test it again, do the following:
 1. Reset your *Triggered* item in the DynamoDB table to "false", for the "green-app" index.
-2. Stop your ECS task, which is associated with your *green-app* container. Once the ECS service notices it is dead, it will restart it.  This will re-trigger
+2. Stop your ECS task, which is associated with your *green-app* container. Once the ECS service notices it is dead, 
+it will restart it.  This will re-trigger
 the process, and you will notice the Route53 weights changing, and the StepFunction firing again.
 
 ![Diagram 4](images/stepFunction.png)
 
 ## Cleaning Up
 
-To clean-up delete the CloudFormation scripts in reverse order. You must delete the ALB records in the Route53 HostedZone manually, or you will get a "delete-failure".
+To clean-up delete the CloudFormation scripts in reverse order. You must delete the ALB records in the 
+Route53 HostedZone manually, or you will get a "delete-failure".
 Do not forget you delete your S3 bucket.
 
 
-## Resources created in this exercise *UPDATE*
+## To Do or known issues
+* Make sure templates can work in all regions, not just us-east-1
+* There is sometimes a race condition in reading/writing the *Triggered* key in the DynamoDB table
+* Add better error catching in the StepFunction
+* Create some automation around parameters, so users do not have to fill in the DynamoDB table
+
+## Resources created in this exercise
 
 Count | AWS resources 
 | --- | --- |
-7   | [AWS CloudFormation templates](https://aws.amazon.com/cloudformation/)
-1   | [Amazon VPC](https://aws.amazon.com/vpc/) (10.215.0.0/16)   
-1  | [AWS CodePipeline](https://aws.amazon.com/codepipeline/) 
-2  | [AWS CodeBuild projects](https://aws.amazon.com/codebuild/) 
+7  | [AWS CloudFormation templates](https://aws.amazon.com/cloudformation/)
+1  | [Amazon VPC](https://aws.amazon.com/vpc/) (10.215+216.0.0 / 16)   
+1  | [AWS Step Functions](https://aws.amazon.com/step-functions/) 
 1  | [Amazon S3 Bucket](https://aws.amazon.com/s3/) 
-1  | [AWS Lambda](https://aws.amazon.com/lambda/) 
+3  | [AWS Lambda](https://aws.amazon.com/lambda/) 
 1  | [Amazon ECS Cluster](https://aws.amazon.com/ecs/) 
-2  | [Amazon ECS Service](https://aws.amazon.com/ecs/) 
-1  | [Application Load Balancer](https://aws.amazon.com/elasticloadbalancing/applicationloadbalancer/) 
+2  | [Amazon ECS Service](https://aws.amazon.com/ecs/)
+1  | [ECS Event Stream for CloudWatch Events](http://docs.aws.amazon.com/AmazonECS/latest/developerguide/cloudwatch_event_stream.html) 
+2  | [Application Load Balancer](https://aws.amazon.com/elasticloadbalancing/applicationloadbalancer/) 
 2  | [Application Load Balancer Target Groups](https://aws.amazon.com/elasticloadbalancing/applicationloadbalancer/) 
- 
-
-*UPDATE*
-
-#### [DeploymentPipeline](templates/deployment-pipeline.yaml)
-
-  Resources that compose the deployment pipeline include the CodeBuild project, the CodePipeline pipeline, an S3 bucket for deployment artifacts, and all necessary IAM roles used by those services.
-
-#### [Service](templates/service.yaml)
-
-  An ECS task definition, service, IAM role, and ECR repository for the sample application. This template is used by the CodePipeline pipeline to deploy the sample service continuously.
-
-#### [Cluster](templates/ecs-cluster.yaml)
-
-  An ECS cluster backed by an Auto Scaling group of EC2 instances running the Amazon ECS-optimized AMI.
-
-#### [Load Balancer](templates/load-balancer.yaml)
-
-  An Application Load Balancer to be used for traffic to the sample application.
-
-#### [VPC](templates/vpc.yaml)
-
-  A VPC with two public subnets on two separate Availability Zones, an internet gateway, and a route table with a default route to the public internet.
+1  | [Route53 Hosted Zone](https://aws.amazon.com/route53/)
+1  | [DynamoDB Table](https://aws.amazon.com/dynamodb/)
 
 ## License
 
-This reference architecture sample is [licensed][license] under Apache 2.0.
-
-
-[continuous-deployment]: https://aws.amazon.com/devops/continuous-delivery/
-[architecture]: images/architecture.pdf
-[license]: LICENSE
+This reference architecture sample is [licensed](./LICESE) under Apache 2.0.
