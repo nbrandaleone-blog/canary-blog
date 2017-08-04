@@ -101,7 +101,7 @@ This DynamoDB table is called "CanaryTable".
 
 ![Diagram 3](images/dynamo-table.png)
 
-A sample entry in the DynomoDB table looks like the above diagram. If you want to test out your own services, you will have to update the table AND update the lambda function (blue color in diagram) which filters the Event stream.
+A sample entry in the DynamoDB table looks like the above diagram. If you want to test out your own services, you will have to update the table AND update the lambda function (blue color in diagram) which filters the Event stream.
 
 ## Testing
 
@@ -148,4 +148,4 @@ Count | AWS resources
 
 ## License
 
-This reference architecture sample is [licensed](./LICESE) under Apache 2.0.
+This reference architecture sample is [licensed](./LICENSE) under Apache 2.0.
