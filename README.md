@@ -84,7 +84,7 @@ Here is the logical flow of how the solution works. We will discuss each compone
 ![Diagram 2](images/canary-flowchart.png)
 
 The first component is [ECS Events](http://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs_cwe_events.html),
-which tracks container or task changes. We are intersted in being notified once a new task is _RUNNING_.
+which tracks container or task changes. We are interested in being notified once a new task is _RUNNING_.
 We tell [CloudWatch Events](http://docs.aws.amazon.com/AmazonCloudWatch/latest/events/WhatIsCloudWatchEvents.html)
 to send notification to a Lambda function, which will discriminate the event stream, focusing only
 on those relevant to our canary deployment.
@@ -105,7 +105,7 @@ A sample entry in the DynamoDB table looks like the above diagram. If you want t
 
 ## Testing
 
-Once the second CloudFormation script completes, the new *green* ECS service will be stared within seconds.  
+Once the second CloudFormation script completes, the new *green* ECS service will be started within seconds.  
 Monitor both the Route53 HostedZone screen, along with the StepFunction console. You will see the weights 
 change slowly at first, and then faster.  The StepFunction has a GUI where you can visualize these changes.
 If you want to test it again, do the following:
@@ -134,7 +134,7 @@ Do not forget you delete your S3 bucket.
 Count | AWS resources 
 | --- | --- |
 7  | [AWS CloudFormation templates](https://aws.amazon.com/cloudformation/)
-1  | [Amazon VPC](https://aws.amazon.com/vpc/) (10.215+216.0.0 / 16)   
+1  | [Amazon VPC](https://aws.amazon.com/vpc/) (192.168.10 and 20.0 / 24)   
 1  | [AWS Step Functions](https://aws.amazon.com/step-functions/) 
 1  | [Amazon S3 Bucket](https://aws.amazon.com/s3/) 
 3  | [AWS Lambda](https://aws.amazon.com/lambda/) 
