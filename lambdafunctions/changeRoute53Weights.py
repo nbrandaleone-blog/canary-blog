@@ -77,5 +77,4 @@ def lambda_handler(event, context):
         toDNS = item['NewLB']
     
         resp = change_weights(blue_weight, green_weight, HostedZoneID, LBZoneID, ServiceName, fromDNS, toDNS)
-        print(resp)
-        return target
+        return 'Route53 weight change pending'

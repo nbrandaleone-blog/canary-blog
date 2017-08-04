@@ -36,6 +36,10 @@ Resources:
             Action:
             - route53:*
             Resource: "*"
+          - Effect: Allow
+            Action:
+            - elasticloadbalancing:Describe*
+            Resource: "*"
 
   MyLambdaFunction:
     Type: "AWS::Lambda::Function"
@@ -71,7 +75,20 @@ Resources:
                 Action:
                   - "lambda:InvokeFunction"
                 Resource: "*"
-
+                
+  CheckHealthFunction:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Handler: lambda_function.lambda_handler  # <file_name [excluding .py]>.<entry_point>
+      Role: !GetAtt [ LambdaExecutionRole, Arn ]
+      Code:
+        S3Bucket: !Ref TemplateBucket # no s3:// in prefix
+        S3Key: lambdafunctions/checkGreenHealth.zip
+      Description: Check the health of the NewLB TargetGroup, which is the "green" ECS service
+      Runtime: "python3.6"
+      MemorySize: 128
+      Timeout: 3
+      
   MyStateMachine:
     Type: AWS::StepFunctions::StateMachine
     Properties:
@@ -91,14 +108,49 @@ Resources:
                 "change_10_percent": {
                   "Type": "Task",
                   "Resource": "${lambdaArn}",
-                  "ResultPath":"$.target",
+                  "ResultPath":"$.result_10",
                   "TimeoutSeconds":3,
                   "Next": "wait_60_secondsA"
                 },
                 "wait_60_secondsA": {
                   "Type": "Wait",
                   "Seconds": 60,
-                  "Next": "send_50"
+                  "Next": "check_healthA"
+                },
+                "check_healthA":{
+                    "Type": "Task",
+                    "Resource": "${healthArn}",
+                    "TimeoutSeconds":3,
+                  "ResultPath":"$.health",
+                    "Next": "ChoiceStateA"
+                },
+                "ChoiceStateA": {
+                  "Type": "Choice",
+                  "Choices":[
+                    {
+                      "Variable": "$.health.State",
+                      "StringEquals":"healthy",
+                      "Next": "send_50"
+                    }
+                  ],
+                  "Default":"fall-back"
+                },
+                "fall-back":{
+                  "Type": "Pass",
+                  "Result": 0,
+                  "ResultPath":"$.weight",
+                  "Next": "change_0_percent"
+                },
+                "change_0_percent":{
+                    "Type": "Task",
+                    "Resource": "${lambdaArn}",
+                    "ResultPath":"$.target",
+                    "TimeoutSeconds":3,
+                    "Next": "DefaultState"
+                },
+                "DefaultState": {
+                  "Type": "Fail",
+                  "Cause": "New ECS service is not healthy!"
                 },
                 "send_50": {
                   "Type": "Pass",
@@ -110,14 +162,32 @@ Resources:
                 "change_50_percent": {
                   "Type": "Task",
                   "Resource": "${lambdaArn}",
-                  "ResultPath":"$.target",
+                  "ResultPath":"$.result_50",
                   "TimeoutSeconds":3,
                   "Next": "wait_60_secondsB"
                   },
                 "wait_60_secondsB": {
                   "Type": "Wait",
                   "Seconds": 60,
-                  "Next": "send_100"
+                  "Next": "check_healthB"
+                },
+                "check_healthB":{
+                    "Type": "Task",
+                    "Resource": "${healthArn}",
+                    "TimeoutSeconds":3,
+                  "ResultPath":"$.health",
+                    "Next": "ChoiceStateB"
+                },
+                "ChoiceStateB": {
+                  "Type": "Choice",
+                  "Choices":[
+                    {
+                      "Variable": "$.health.State",
+                      "StringEquals":"healthy",
+                      "Next": "send_100"
+                    }
+                  ],
+                  "Default":"fall-back"
                 },
                 "send_100": {
                   "Type": "Pass",
@@ -129,13 +199,41 @@ Resources:
                 "change_100_percent": {
                   "Type": "Task",
                   "Resource": "${lambdaArn}",
-                  "ResultPath":"$.target",
+                  "ResultPath":"$.result_100",
                   "TimeoutSeconds":3,
-                  "End":true
+                  "Next":"wait_60_secondsC"
+                },
+                "check_healthC":{
+                    "Type": "Task",
+                    "Resource": "${healthArn}",
+                    "TimeoutSeconds":3,
+                  "ResultPath":"$.health",
+                    "Next": "ChoiceStateC"
+                },
+                "ChoiceStateC": {
+                  "Type": "Choice",
+                  "Choices":[
+                    {
+                      "Variable": "$.health.State",
+                      "StringEquals":"healthy",
+                      "Next": "SuccessState"
+                    }
+                  ],
+                  "Default":"fall-back"
+                },
+                    "wait_60_secondsC": {
+                  "Type": "Wait",
+                  "Seconds": 60,
+                  "Next": "check_healthC"
+                },
+                "SuccessState": {
+                  "Type": "Pass",
+                  "Result" : "True",
+                  "End": true
                 }
               }
             }
-          - {lambdaArn: !GetAtt [ MyLambdaFunction, Arn ]}
+          - {lambdaArn: !GetAtt [ MyLambdaFunction, Arn ], healthArn: !GetAtt [ CheckHealthFunction, Arn]}
       RoleArn: !GetAtt [ StatesExecutionRole, Arn ]
 
 Outputs:
