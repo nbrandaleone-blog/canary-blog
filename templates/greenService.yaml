@@ -67,20 +67,11 @@ Resources:
           PortMappings:
             - ContainerPort: 80
               HostPort: 0
-          LogConfiguration:
-            LogDriver: awslogs
-            Options:
-              awslogs-group: awslogs-web
-              awslogs-region: !Ref 'AWS::Region'
-              awslogs-stream-prefix: ecs-demo-httpd
         - Name: busybox
           Essential: false
           Cpu: 100
           Memory: 128
           Image: busybox
-          #Environment:
-          #  - Name: Tag
-          #    Value: !Ref Tag
           VolumesFrom:
             - SourceContainer: green-app
           EntryPoint:
@@ -88,9 +79,3 @@ Resources:
             - -c
           Command: 
             - /bin/sh -c "echo GREEN-SERVICE > /var/www/my-vol/date"
-          LogConfiguration:
-            LogDriver: awslogs
-            Options:
-              awslogs-group: awslogs-web
-              awslogs-region: !Ref 'AWS::Region'
-              awslogs-stream-prefix: ecs-demo-busybox
