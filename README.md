@@ -1,4 +1,4 @@
-# Canary Blue/Green deployments on ECS *DRAFT*
+# Canary Blue/Green deployments on ECS
 
 This reference architecture demonstrates how to execute a canary deployment for Elastic Container Service. 
 In order to provide an automated and safe method of migrating traffic from a *blue* deployment
