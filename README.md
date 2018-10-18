@@ -1,6 +1,6 @@
 # Canary Blue/Green deployments on ECS
 
-This reference architecture demonstrates how to execute a canary deployment for Elastic Container Service. 
+This reference architecture demonstrates how to execute a canary deployment for Elastic Container Service. Real world experience has shown that unless you have confidence of the client's DNS resolver to work as expected, this solution will ***not*** be effective since the client will not refresh its mapping between service name and IP addresss. 
 In order to provide an automated and safe method of migrating traffic from a *blue* deployment
 to a *green* one, this solution leverages Route53 weights to adjust the traffic flow from one ECS service to another.
 We associate a new service with a separate Application Load Balancer, leveraging ECS Event Streams 
